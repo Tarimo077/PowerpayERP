@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block public_content %}
+  <div class="min-h-screen bg-base-200 grid place-items-center p-6">
+    <div class="card bg-white shadow-xl w-full max-w-md border-t-4 border-orange-500">
+      <div class="card-body text-center">
+        <img src="{% static 'images/powerpaylogo.png' %}" class="w-40 mx-auto" /><h1 class="text-2xl font-bold mt-3">Verify your sign-in</h1><p class="opacity-60">
+          We sent a six-digit code to <b class="text-orange-500">{{ email }}</b>.
+        </p>
+        <form method="post" id="otp-form" class="space-y-5">
+          {% csrf_token %}
+          <div class="flex justify-center gap-2 sm:gap-3" aria-label="Six digit verification code">
+            {% for digit in "123456" %}<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="{% if forloop.first %}one-time-code{% else %}off{% endif %}" class="otp-box input input-bordered w-11 h-12 sm:w-12 sm:h-14 p-0 text-center text-xl font-bold border-green-300 focus:border-green-500 focus:ring focus:ring-green-200" aria-label="Digit {{ forloop.counter }}">{% endfor %}
+          </div>
+          <input type="hidden" name="otp" id="otp-combined">
+          {% if form.otp.errors %}<p class="text-error text-sm text-center">{{ form.otp.errors.0 }}</p>{% endif %}
+          <button class="btn btn-primary w-full"><i class="fa-solid fa-lock"></i> Verify code</button>
+        </form>
+        <form method="post" action="{% url 'resend_otp' %}">
+          {% csrf_token %}<button class="btn btn-ghost btn-sm text-orange-500">Resend code</button>
+        </form><a href="{% url 'login' %}" class="link text-sm">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    const boxes=[...document.querySelectorAll('.otp-box')],combined=document.getElementById('otp-combined'),otpForm=document.getElementById('otp-form');
+    const sync=()=>combined.value=boxes.map(box=>box.value).join('');
+    boxes.forEach((box,index)=>{
+      box.addEventListener('input',()=>{box.value=box.value.replace(/\D/g,'').slice(-1);sync();if(box.value&&index<boxes.length-1)boxes[index+1].focus()});
+      box.addEventListener('keydown',event=>{if(event.key==='Backspace'&&!box.value&&index>0){boxes[index-1].focus();boxes[index-1].value='';sync()}if(event.key==='ArrowLeft'&&index>0)boxes[index-1].focus();if(event.key==='ArrowRight'&&index<boxes.length-1)boxes[index+1].focus()});
+      box.addEventListener('paste',event=>{event.preventDefault();const digits=event.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);digits.split('').forEach((digit,i)=>{if(boxes[i])boxes[i].value=digit});sync();boxes[Math.min(digits.length,5)]?.focus()});
+    });
+    otpForm.addEventListener('submit',event=>{sync();if(combined.value.length!==6){event.preventDefault();boxes.find(box=>!box.value)?.focus()}});boxes[0]?.focus();
+  </script>
+{% endblock %}

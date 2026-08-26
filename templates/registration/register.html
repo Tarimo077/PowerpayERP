@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block public_content %}
+  <div class="min-h-screen bg-base-200 p-6 grid place-items-center">
+    <div class="card bg-base-100 shadow-xl w-full max-w-3xl border-t-4 border-t-orange-500">
+      <div class="card-body">
+        <a href="/"><img src="{% static 'images/powerpaylogo.png' %}" class="w-40" alt="PowerPay" /></a><h1 class="card-title text-3xl mt-3">Create your organization</h1><p class="text-base-content/60 mb-4">Your isolated workspace will be ready in seconds.</p>
+        <form method="post" class="grid md:grid-cols-2 gap-4">
+          {% csrf_token %}
+          {% for field in form %}
+            <label class="form-control"><span class="label"><span class="label-text">{{ field.label }}</span></span>{{ field }}{{ field.errors }}</label>
+          {% endfor %}<button class="btn btn-primary md:col-span-2 mt-3">Create workspace</button>
+        </form>
+        <p class="text-center mt-4">
+          Already registered? <a class="link link-primary" href="{% url 'login' %}">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

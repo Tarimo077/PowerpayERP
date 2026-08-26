@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Dashboard
+{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap justify-between gap-3 mb-7">
+    <div>
+      <h2 class="text-2xl font-bold">Good day, {{ user.first_name|default:user.username }}</h2><p class="text-base-content/60">Here’s what needs your attention today.</p>
+    </div>
+    {% if not super_view %}
+      <a href="{% url 'task_create' %}" class="btn btn-primary" data-modal data-modal-title="Assign task">+ Assign task</a>
+    {% endif %}
+  </div>
+  <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+    {% for label, value in stats %}
+      <div class="stat bg-base-100 rounded-2xl border border-base-300">
+        <div class="stat-title">{{ label }}</div>
+        <div class="stat-value text-primary">{{ value }}</div>
+      </div>
+    {% endfor %}
+  </div>
+  {% if super_view %}
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+      <a href="{% url 'platform_organizations' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+        <div class="card-body">
+          <div class="text-primary text-2xl">🏢</div>
+          <h3 class="card-title">Organizations</h3>
+          <p class="text-sm opacity-60">Inspect workspaces, review their data, and suspend or restore access.</p>
+        </div>
+      </a>
+      <a href="{% url 'platform_users' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+        <div class="card-body">
+          <div class="text-primary text-2xl">👥</div>
+          <h3 class="card-title">All users</h3>
+          <p class="text-sm opacity-60">Find accounts across organizations and manage their access.</p>
+        </div>
+      </a>
+      <a href="{% url 'platform_activity' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+        <div class="card-body">
+          <div class="text-primary text-2xl">🕘</div>
+          <h3 class="card-title">System activity</h3>
+          <p class="text-sm opacity-60">Review the audit trail across every organization.</p>
+        </div>
+      </a>
+    </div>
+    <div class="card bg-base-100">
+      <div class="card-body">
+        <h3 class="card-title">Recent platform activity</h3>{% for row in recent_audit %}
+          <div class="flex justify-between border-b py-3">
+            <span>{{ row.action }} · {{ row.actor|default:'System' }}</span><span class="text-sm opacity-60">{{ row.created_at|timesince }} ago</span>
+          </div>
+        {% empty %}
+          <p>No activity yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="grid xl:grid-cols-3 gap-6">
+      <div class="card bg-base-100 xl:col-span-2">
+        <div class="card-body">
+          <div class="flex justify-between">
+            <h3 class="card-title">Priority work</h3><a href="{% url 'tasks' %}" class="link">View all</a>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th>Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for task in tasks %}
+                  <tr>
+                    <td>
+                      <a class="font-semibold link" href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
+                    </td>
+                    <td>{{ task.assigned_to }}</td>
+                    <td>
+                      <span class="badge badge-ghost">{{ task.get_status_display }}</span>
+                    </td>
+                    <td class="{% if task.is_overdue %}text-error font-bold{% endif %}">{{ task.due_date }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4">No tasks yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card bg-base-100">
+        <div class="card-body">
+          <h3 class="card-title">Timesheets</h3>{% for sheet in timesheets %}
+            <a href="{% url 'timesheet_detail' sheet.pk %}" class="border-b py-3">
+              <div class="font-semibold">{{ sheet.employee }}</div>
+              <div class="text-sm opacity-60">{{ sheet.period_start }} · {{ sheet.get_status_display }}</div>
+            </a>
+          {% empty %}
+            <p class="opacity-60">No timesheets yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

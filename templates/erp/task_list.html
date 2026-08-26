@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Tasks
+{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap justify-between gap-3 mb-6">
+    <form class="flex gap-2">
+      <input name="q" value="{{ request.GET.q }}" class="input input-bordered" placeholder="Search tasks" />
+      <select name="status" class="select select-bordered">
+        <option value="">All statuses</option>
+        {% for v, l in statuses %}
+          <option value="{{ v }}">{{ l }}</option>
+        {% endfor %}
+      </select><button class="btn">Filter</button>
+    </form>
+    {% if current_profile.role != 'employee' %}
+      <a href="{% url 'task_create' %}" class="btn btn-primary" data-modal data-modal-title="Assign task">+ Assign task</a>
+    {% endif %}
+  </div>
+  <div class="card bg-base-100">
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Assignee</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Due date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+            <tr class="hover">
+              <td>
+                <a href="{% url 'task_detail' task.pk %}" class="font-semibold link">{{ task.title }}</a><div class="text-xs opacity-50">{{ task.department|default:'General' }}</div>
+              </td>
+              <td>{{ task.assigned_to }}</td>
+              <td>
+                <span class="badge {% if task.priority == 'urgent' %}
+                    badge-error
+                  {% elif task.priority == 'high' %}
+                    badge-warning
+                  {% else %}
+                    badge-ghost
+                  {% endif %}">
+                  {{ task.get_priority_display }}
+                </span>
+              </td>
+              <td>{{ task.get_status_display }}</td>
+              <td class="{% if task.is_overdue %}text-error font-bold{% endif %}">{{ task.due_date }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-14 opacity-50">No tasks match your filters.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

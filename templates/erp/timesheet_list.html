@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Timesheets
+{% endblock %}
+{% block content %}
+  <div class="flex justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold">Timesheets</h2><p class="opacity-60">Track submitted work and approvals.</p>
+    </div><a href="{% url 'timesheet_create' %}" class="btn btn-primary" data-modal data-modal-title="New timesheet">+ New timesheet</a>
+  </div>
+  <div class="card bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Period</th>
+          <th>Hours</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sheet in timesheets %}
+          <tr>
+            <td class="font-semibold">{{ sheet.employee }}</td>
+            <td>{{ sheet.period_start }} — {{ sheet.period_end }}</td>
+            <td>{{ sheet.hours|default:0 }}</td>
+            <td>
+              <span class="badge {% if sheet.status == 'approved' %}
+                  badge-success
+                {% elif sheet.status == 'rejected' %}
+                  badge-error
+                {% elif sheet.status == 'submitted' %}
+                  badge-warning
+                {% endif %}">
+                {{ sheet.get_status_display }}
+              </span>
+            </td>
+            <td>
+              <a class="btn btn-sm btn-ghost" href="{% url 'timesheet_detail' sheet.pk %}">Open →</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-14 opacity-50">No timesheets yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

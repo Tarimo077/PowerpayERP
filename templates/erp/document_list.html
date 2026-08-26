@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Documents
+{% endblock %}
+{% block content %}
+  <div class="flex justify-between mb-6">
+    <div>
+      <h2 class="text-2xl font-bold">Document library</h2><p class="opacity-60">Secure, searchable organizational files.</p>
+    </div><a href="{% url 'document_upload' %}" class="btn btn-primary" data-modal data-modal-title="Upload document">↑ Upload</a>
+  </div>
+  <div class="card bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Category</th>
+          <th>Visibility</th>
+          <th>Uploaded</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in documents %}
+          <tr>
+            <td class="font-semibold">▤ {{ d.title }}</td>
+            <td>{{ d.category|default:'General' }}</td>
+            <td>
+              <span class="badge badge-ghost">{{ d.get_visibility_display }}</span>
+            </td>
+            <td>{{ d.created_at|date:'M d, Y' }}</td>
+            <td>
+              <a class="btn btn-sm btn-ghost" href="{{ d.file.url }}" download>Download</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-14 opacity-50">No documents uploaded.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

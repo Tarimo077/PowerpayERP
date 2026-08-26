@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block public_content %}
+  <div class="navbar bg-base-100 px-6 lg:px-16">
+    <div class="flex-1">
+      <img src="{% static 'images/powerpaylogo.png' %}" class="w-64" alt="PowerPay" />
+    </div><a href="{% url 'login' %}" class="btn btn-ghost mr-6">Sign in</a><a href="{% url 'register' %}" class="btn btn-primary">Create workspace</a>
+  </div>
+  <section class="hero min-h-[95vh] bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 text-white relative overflow-hidden">
+    <div class="absolute -right-20 -top-20 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl"></div>
+    <div class="hero-content text-center max-w-5xl relative">
+      <div>
+        <div class="badge text-orange-500 mb-6 p-4 text-xl">One secure workspace for your organization</div><h1 class="text-5xl lg:text-7xl font-black leading-tight">Work moves faster when everything is connected.</h1><p class="py-8 text-lg text-emerald-100 max-w-2xl mx-auto">Manage your people, tasks, timesheets, approvals, and documents with clear ownership and complete tenant isolation.</p><a href="{% url 'register' %}" class="btn btn-primary btn-lg">Start your organization <span class="text-orange-300">→</span></a>
+      </div>
+    </div>
+  </section>
+{% endblock %}

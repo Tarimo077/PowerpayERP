@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Audit log
+{% endblock %}
+{% block content %}
+  <h2 class="text-2xl font-bold mb-5">Security & activity log</h2><div class="card bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Actor</th>
+          <th>Record</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="font-semibold">{{ log.action }}</td>
+            <td>{{ log.actor|default:'System' }}</td>
+            <td>{{ log.entity_type }} #{{ log.entity_id }}</td>
+            <td>{{ log.created_at }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4">No activity recorded.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

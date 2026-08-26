@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Notifications
+{% endblock %}
+{% block content %}
+  <div class="max-w-3xl">
+    <h2 class="text-2xl font-bold mb-5">Notifications</h2><div class="card bg-base-100">
+      <div class="card-body">
+        {% for n in notifications %}
+          <a href="{{ n.url|default:'#' }}" class="border-b py-4">
+            <div class="font-bold">{{ n.title }}</div>
+            <p class="opacity-70">{{ n.message }}</p><small>{{ n.created_at|timesince }} ago</small>
+          </a>
+        {% empty %}
+          <p>No notifications yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

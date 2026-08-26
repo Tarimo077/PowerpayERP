@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  Timesheet
+{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap justify-between mb-6 gap-3">
+    <div>
+      <h2 class="text-2xl font-bold">{{ timesheet.employee }}</h2><p>
+        {{ timesheet.period_start }} — {{ timesheet.period_end }} · <span class="badge">{{ timesheet.get_status_display }}</span>
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-3" data-button-row>
+      <a class="btn btn-outline" href="{% url 'timesheet_export' timesheet.pk 'pdf' %}">Export PDF</a><a class="btn btn-outline" href="{% url 'timesheet_export' timesheet.pk 'csv' %}">Export CSV</a>
+    </div>
+  </div>
+  <div class="grid lg:grid-cols-3 gap-6">
+    <div class="card bg-base-100 lg:col-span-2">
+      <div class="card-body">
+        <h3 class="card-title">Entries</h3><table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Work performed</th>
+              <th>Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in timesheet.entries.all %}
+              <tr>
+                <td>{{ e.date }}</td>
+                <td>
+                  <b>{{ e.task_performed }}</b><div class="text-xs opacity-60">{{ e.description }}</div>
+                </td>
+                <td>{{ e.hours }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">No entries yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th></th>
+              <th>Total</th>
+              <th>{{ timesheet.total_hours }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="space-y-5">
+      {% if current_profile.id == timesheet.employee_id and timesheet.status == 'draft' %}
+        <div class="card bg-base-100">
+          <form method="post" enctype="multipart/form-data" class="card-body" data-popup-form data-allow-add-another data-popup-label="+ Add entry" data-popup-title="Add timesheet entry">
+            {% csrf_token %}<h3 class="card-title">Add entry</h3>{{ form.as_p }}<button class="btn btn-primary">Add entry</button>
+          </form>
+        </div>
+        <form method="post" action="{% url 'timesheet_action' timesheet.pk %}" data-popup-form data-popup-label="Submit for approval" data-popup-title="Submit timesheet for approval">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="submit" /><button class="btn btn-primary w-full">Submit for approval</button>
+        </form>
+      {% endif %}
+      {% if current_profile.role != 'employee' and timesheet.status == 'submitted' %}
+        <div class="card bg-base-100">
+          <form method="post" action="{% url 'timesheet_action' timesheet.pk %}" class="card-body" data-popup-form data-popup-label="Review timesheet" data-popup-title="Review timesheet">
+            {% csrf_token %}
+            <textarea class="textarea textarea-bordered" name="notes" placeholder="Review notes"></textarea>
+            <div class="grid grid-cols-2 gap-2">
+              <button name="action" value="rejected" class="btn btn-error btn-outline">Reject</button><button name="action" value="approved" class="btn btn-success">Approve</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+      {% if timesheet.reviewed_by %}
+        <div class="alert">
+          <span>Reviewed by {{ timesheet.reviewed_by.get_full_name }}<br />{{ timesheet.review_notes }}</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
