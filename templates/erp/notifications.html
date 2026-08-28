@@ -3,18 +3,29 @@
   Notifications
 {% endblock %}
 {% block content %}
-  <div class="max-w-3xl">
-    <h2 class="text-2xl font-bold mb-5">Notifications</h2><div class="card bg-base-100">
-      <div class="card-body">
+  <div class="max-w-5xl mx-auto space-y-6">
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-500 text-white shadow-xl shadow-emerald-900/10">
+      <div class="absolute -right-10 -top-14 w-52 h-52 rounded-full bg-orange-400/25"></div>
+      <div class="absolute right-28 -bottom-20 w-40 h-40 rounded-full bg-white/10"></div>
+      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 sm:p-8">
+        <div class="flex items-center gap-4"><span class="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 grid place-items-center text-2xl"><i class="fa-solid fa-bell"></i></span><div><p class="text-xs font-semibold uppercase tracking-[.2em] text-emerald-100">Your activity centre</p><h2 class="text-2xl sm:text-3xl font-bold mt-1">Notifications</h2><p class="text-sm text-emerald-50/80 mt-1">Keep up with assignments, approvals and conversations.</p></div></div>
+        <button type="button" data-notification-read-all data-url="{% url 'notifications_read_all' %}" class="btn border-white/25 bg-white/15 text-white hover:bg-orange-500 hover:border-orange-500 {% if not unread_exists %}hidden{% endif %}"><i class="fa-solid fa-check-double"></i> Mark all as read</button>
+      </div>
+    </section>
+
+    <section class="rounded-3xl border border-base-200 bg-base-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-base-200"><div><h3 class="font-bold">Latest updates</h3><p class="text-xs text-base-content/50 mt-0.5">Unread items are highlighted in orange.</p></div><span class="badge badge-outline border-emerald-200 text-emerald-700">Newest first</span></div>
+      <div class="divide-y divide-base-200">
         {% for n in notifications %}
-          <a href="{{ n.url|default:'#' }}" class="border-b py-4">
-            <div class="font-bold">{{ n.title }}</div>
-            <p class="opacity-70">{{ n.message }}</p><small>{{ n.created_at|timesince }} ago</small>
+          <a href="{{ n.url|default:'#' }}" data-notification-item data-notification-id="{{ n.pk }}" data-read-url="{% url 'notification_read' n.pk %}" class="group flex items-start gap-4 px-5 sm:px-6 py-5 transition-all hover:bg-emerald-50/50 {% if not n.is_read %}bg-orange-50/50 border-l-4 border-orange-400{% else %}border-l-4 border-transparent{% endif %}">
+            <span data-notification-icon class="w-12 h-12 shrink-0 rounded-2xl grid place-items-center text-lg {% if not n.is_read %}bg-orange-500 text-white shadow-lg shadow-orange-500/20{% else %}bg-base-200 text-base-content/45{% endif %}"><i class="fa-solid {% if 'task' in n.title|lower %}fa-list-check{% elif 'voucher' in n.title|lower %}fa-money-check-dollar{% elif 'channel' in n.title|lower or 'chat' in n.title|lower %}fa-comments{% elif 'timesheet' in n.title|lower %}fa-clock{% else %}fa-bell{% endif %}"></i></span>
+            <span class="min-w-0 flex-1"><span class="flex items-start justify-between gap-4"><b class="text-sm sm:text-base group-hover:text-emerald-700 transition-colors">{{ n.title }}</b>{% if not n.is_read %}<i data-unread-dot class="mt-1.5 w-2.5 h-2.5 shrink-0 rounded-full bg-orange-500 ring-4 ring-orange-100"></i>{% endif %}</span><span class="block text-sm text-base-content/65 mt-1 leading-relaxed">{{ n.message|default:'Open this update for more details.' }}</span><span class="inline-flex items-center gap-1.5 text-[11px] text-base-content/40 mt-2"><i class="fa-regular fa-clock"></i>{{ n.created_at|timesince }} ago</span></span>
+            <i class="fa-solid fa-chevron-right self-center text-xs text-base-content/20 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all"></i>
           </a>
         {% empty %}
-          <p>No notifications yet.</p>
+          <div class="px-6 py-20 text-center"><span class="mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-50 to-orange-50 text-emerald-600 grid place-items-center text-3xl"><i class="fa-regular fa-bell-slash"></i></span><h3 class="text-lg font-bold mt-5">You’re all caught up</h3><p class="text-sm text-base-content/50 mt-1 max-w-md mx-auto">New task assignments, voucher decisions and conversation updates will appear here.</p></div>
         {% endfor %}
       </div>
-    </div>
+    </section>
   </div>
 {% endblock %}

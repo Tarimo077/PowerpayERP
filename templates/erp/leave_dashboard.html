@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block page_title %}Leave{% endblock %}
+{% block content %}
+<div class="space-y-7">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div><h2 class="text-2xl font-bold">Leave management</h2><p class="text-sm opacity-60 mt-1">Manage balances, requests and approvals for {{ year }}.</p></div>
+    <div class="flex flex-wrap justify-end gap-3" data-page-actions>
+      <a href="{% url 'leave_request_create' %}" data-modal data-modal-title="Request leave" class="btn btn-primary text-white"><i class="fa-solid fa-paper-plane"></i> Request leave</a>
+      {% if can_allocate %}<a href="{% url 'leave_allocation_create' %}" data-modal data-modal-title="Assign leave days" class="btn bg-orange-500 border-orange-500 text-white hover:bg-orange-600 hover:border-orange-600"><i class="fa-solid fa-calendar-plus"></i> Assign leave days</a>{% endif %}
+    </div>
+  </div>
+
+  <section>
+    <div class="flex items-center justify-between mb-3"><div><h3 class="font-bold text-lg">My {{ year }} balances</h3><p class="text-xs opacity-50">Pending requests reserve days until your manager makes a decision.</p></div><form method="get"><select name="year" class="select select-bordered select-sm" onchange="this.form.submit()"><option>{{ year }}</option>{% if year != 2026 %}<option value="2026">2026</option>{% endif %}<option value="{{ year|add:'1' }}">{{ year|add:'1' }}</option><option value="{{ year|add:'-1' }}">{{ year|add:'-1' }}</option></select></form></div>
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {% for balance in own_balances %}<div class="relative overflow-hidden rounded-2xl border border-base-200 bg-base-100 p-5 shadow-sm"><span class="absolute -right-6 -top-7 w-20 h-20 rounded-full {% cycle 'bg-emerald-100' 'bg-orange-100' %}"></span><div class="relative"><div class="flex justify-between gap-3"><span class="w-10 h-10 rounded-xl bg-emerald-600 text-white grid place-items-center"><i class="fa-solid fa-calendar-check"></i></span><span class="text-3xl font-black text-emerald-700">{{ balance.remaining_days }}</span></div><h4 class="font-bold mt-4">{{ balance.get_leave_type_display }}</h4><p class="text-xs opacity-55 mt-1">{{ balance.used_days }} used · {{ balance.pending_days }} pending · {{ balance.allocated_days }} assigned</p></div></div>{% empty %}<div class="sm:col-span-2 xl:col-span-4 rounded-2xl border border-dashed border-base-300 bg-base-100 p-8 text-center"><i class="fa-regular fa-calendar-xmark text-2xl text-orange-500"></i><p class="font-semibold mt-2">No leave days assigned for {{ year }}</p><p class="text-xs opacity-50 mt-1">Your manager can assign a leave balance before you submit a request.</p></div>{% endfor %}
+    </div>
+  </section>
+
+  {% if can_allocate %}
+  <section class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-base-200"><h3 class="font-bold text-lg">Requests awaiting your review</h3><p class="text-xs opacity-50">Requests are routed using each employee’s assigned manager.</p></div>
+    <div class="overflow-x-auto"><table class="table"><thead><tr><th>Employee</th><th>Leave type</th><th>Dates</th><th>Days</th><th>Reason</th><th class="text-right">Action</th></tr></thead><tbody>{% for leave in review_requests %}<tr><td><b>{{ leave.employee }}</b><div class="text-xs opacity-50">{{ leave.employee.employee_id|default:'No employee ID' }}</div></td><td>{{ leave.get_leave_type_display }}</td><td class="whitespace-nowrap">{{ leave.start_date|date:'d M Y' }} — {{ leave.end_date|date:'d M Y' }}</td><td><span class="badge badge-warning">{{ leave.days }} day{{ leave.days|pluralize }}</span></td><td class="max-w-xs truncate">{{ leave.reason }}</td><td class="text-right"><a href="{% url 'leave_request_review' leave.pk %}" data-modal data-modal-title="Review leave request" class="btn btn-sm btn-primary text-white"><i class="fa-solid fa-gavel"></i> Review</a></td></tr>{% empty %}<tr><td colspan="6" class="py-10 text-center opacity-50">No leave requests are waiting for your review.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+
+  <section class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-base-200"><h3 class="font-bold text-lg">Team leave balances</h3><p class="text-xs opacity-50">Assigned, used, pending and currently available days for {{ year }}.</p></div>
+    <div class="overflow-x-auto"><table class="table"><thead><tr><th>Employee</th><th>Leave type</th><th>Assigned</th><th>Used</th><th>Pending</th><th>Available</th></tr></thead><tbody>{% for balance in team_balances %}<tr><td class="font-semibold">{{ balance.employee }}</td><td>{{ balance.get_leave_type_display }}</td><td>{{ balance.allocated_days }}</td><td>{{ balance.used_days }}</td><td>{{ balance.pending_days }}</td><td><span class="badge badge-success text-white">{{ balance.remaining_days }}</span></td></tr>{% empty %}<tr><td colspan="6" class="py-10 text-center opacity-50">No team leave balances have been assigned for {{ year }}.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  {% endif %}
+
+  <section class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-base-200"><h3 class="font-bold text-lg">My leave requests</h3><p class="text-xs opacity-50">Your request history and manager feedback.</p></div>
+    <div class="overflow-x-auto"><table class="table"><thead><tr><th>Leave type</th><th>Dates</th><th>Days</th><th>Manager</th><th>Status</th><th>Message</th></tr></thead><tbody>{% for leave in own_requests %}<tr><td class="font-semibold">{{ leave.get_leave_type_display }}</td><td class="whitespace-nowrap">{{ leave.start_date|date:'d M Y' }} — {{ leave.end_date|date:'d M Y' }}</td><td>{{ leave.days }}</td><td>{{ leave.requested_approver }}</td><td><span class="badge {% if leave.status == 'approved' %}badge-success text-white{% elif leave.status == 'rejected' %}badge-error text-white{% else %}badge-warning{% endif %}">{{ leave.get_status_display }}</span></td><td>{{ leave.review_message|default:'—' }}</td></tr>{% empty %}<tr><td colspan="6" class="py-10 text-center opacity-50">You have not submitted any leave requests.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+</div>
+{% endblock %}

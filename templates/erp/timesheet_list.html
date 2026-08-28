@@ -3,49 +3,139 @@
   Timesheets
 {% endblock %}
 {% block content %}
-  <div class="flex justify-between mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
-      <h2 class="text-2xl font-bold">Timesheets</h2><p class="opacity-60">Track submitted work and approvals.</p>
-    </div><a href="{% url 'timesheet_create' %}" class="btn btn-primary" data-modal data-modal-title="New timesheet">+ New timesheet</a>
+      <h2 class="text-2xl font-bold">Monthly timesheets</h2><p class="opacity-60">One editable sheet for every month, based on the default expert timesheet.</p>
+    </div>
+    <div class="flex flex-wrap justify-end gap-3">
+      <form method="get">
+        <select name="year" class="select select-bordered" onchange="this.form.submit()">
+          <option>{{ year }}</option>
+          <option value="{{ year|add:'-1' }}">{{ year|add:'-1' }}</option>
+          <option value="{{ year|add:'1' }}">{{ year|add:'1' }}</option>
+        </select>
+      </form>
+      {% if export_anchor %}
+        <a href="{% url 'timesheet_export_year' export_anchor.pk %}" class="btn btn-outline border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" data-modal data-modal-title="Choose months to export"><i class="fa-solid fa-file-excel"></i> Export {{ year }} workbook</a>
+      {% endif %}
+      {% if current_profile.role == 'manager' or current_profile.role == 'admin' %}
+        <a href="{% url 'timesheet_request' %}" class="btn bg-orange-500 border-orange-500 text-white hover:bg-orange-600 hover:border-orange-600" data-modal data-modal-title="Request employee timesheet"><i class="fa-solid fa-paper-plane"></i> Request timesheet</a>
+      {% endif %}<a href="{% url 'timesheet_create' %}" class="btn btn-primary text-white" data-modal data-modal-title="Generate monthly timesheet"><i class="fa-solid fa-calendar-plus"></i> Generate month</a>
+    </div>
   </div>
-  <div class="card bg-base-100">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Employee</th>
-          <th>Period</th>
-          <th>Hours</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for sheet in timesheets %}
-          <tr>
-            <td class="font-semibold">{{ sheet.employee }}</td>
-            <td>{{ sheet.period_start }} — {{ sheet.period_end }}</td>
-            <td>{{ sheet.hours|default:0 }}</td>
-            <td>
-              <span class="badge {% if sheet.status == 'approved' %}
-                  badge-success
-                {% elif sheet.status == 'rejected' %}
-                  badge-error
-                {% elif sheet.status == 'submitted' %}
-                  badge-warning
-                {% endif %}">
-                {{ sheet.get_status_display }}
-              </span>
-            </td>
-            <td>
-              <a class="btn btn-sm btn-ghost" href="{% url 'timesheet_detail' sheet.pk %}">Open →</a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="text-center py-14 opacity-50">No timesheets yet.</td>
-          </tr>
+
+  <div class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden shadow-sm">
+    <div class="overflow-x-auto border-b border-base-200 bg-base-200/50 p-2">
+      <div role="tablist" aria-label="Timesheet month" class="flex gap-2 min-w-max">
+        {% for month in months %}
+          <button type="button"
+            role="tab"
+            data-month-tab="{{ month.number }}"
+            class="month-tab rounded-xl px-4 py-2 text-sm font-semibold transition-all {% if month.number == 1 %}
+              bg-emerald-600 text-white
+            {% else %}
+              hover:bg-emerald-50
+            {% endif %}">
+            {{ month.short }}
+            <span class="badge badge-sm ml-1 {% if month.number == 1 %}
+                bg-white/20 text-white border-0
+              {% else %}
+                badge-ghost
+              {% endif %}">
+              {{ month.timesheets|length }}
+            </span>
+          </button>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
+    {% for month in months %}
+      <section role="tabpanel" data-month-panel="{{ month.number }}" class="{% if month.number != 1 %}hidden{% endif %}">
+        <div class="px-5 py-4 border-b border-base-200 bg-gradient-to-r from-emerald-50/70 to-orange-50/70">
+          <h3 class="text-lg font-bold">{{ month.name }} {{ year }}</h3><p class="text-xs opacity-55">Generated sheets, task activity, signatures and approval status.</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Expert</th>
+                <th>Position</th>
+                <th>Days worked</th>
+                <th>Hours</th>
+                <th>Signatures</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sheet in month.timesheets %}
+                <tr>
+                  <td>
+                    <b>{{ sheet.employee }}</b><div class="text-xs opacity-50">{{ sheet.employee.employee_id|default:'No employee ID' }}</div>
+                  </td>
+                  <td>{{ sheet.employee.position|default:'—' }}</td>
+                  <td>{{ sheet.total_days_worked }}</td>
+                  <td>{{ sheet.hours|default:0 }}</td>
+                  <td>
+                    <div class="flex gap-1">
+                      <span class="badge badge-sm {% if sheet.expert_signature %}
+                          badge-success text-white
+                        {% else %}
+                          badge-ghost
+                        {% endif %}"
+                        title="Expert signature">
+                        E
+                      </span><span class="badge badge-sm {% if sheet.manager_signature %}
+                          badge-success text-white
+                        {% else %}
+                          badge-ghost
+                        {% endif %}"
+                        title="Manager signature">
+                        M
+                      </span><span class="badge badge-sm {% if sheet.consultant_signature %}
+                          badge-success text-white
+                        {% else %}
+                          badge-ghost
+                        {% endif %}"
+                        title="Consultant signature">
+                        C
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge {% if sheet.status == 'approved' %}
+                        badge-success text-white
+                      {% elif sheet.status == 'rejected' %}
+                        badge-error text-white
+                      {% elif sheet.status == 'submitted' %}
+                        badge-warning
+                      {% else %}
+                        badge-ghost
+                      {% endif %}">
+                      {{ sheet.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="flex justify-end gap-3">
+                      <a class="btn btn-sm btn-primary text-white" href="{% url 'timesheet_detail' sheet.pk %}">Open sheet</a><a class="btn btn-sm btn-outline" href="{% url 'timesheet_export_year' sheet.pk %}" data-modal data-modal-title="Choose months to export" title="Choose months to export"><i class="fa-solid fa-file-excel"></i></a>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-14 opacity-50">
+                    <i class="fa-regular fa-calendar-xmark text-2xl"></i><p class="mt-2">No {{ month.name }} timesheets for {{ year }}.</p>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endfor %}
   </div>
+  <script>
+ const monthTabs=[...document.querySelectorAll('[data-month-tab]')],monthPanels=[...document.querySelectorAll('[data-month-panel]')]
+ function showMonth(value){monthTabs.forEach(tab=>{const active=tab.dataset.monthTab===value;tab.classList.toggle('bg-emerald-600',active);tab.classList.toggle('text-white',active);const badge=tab.querySelector('.badge');badge?.classList.toggle('bg-white/20',active);badge?.classList.toggle('text-white',active);badge?.classList.toggle('badge-ghost',!active)});monthPanels.forEach(panel=>panel.classList.toggle('hidden',panel.dataset.monthPanel!==value));try{sessionStorage.setItem('powerpay_timesheet_month',value)}catch(error){}}
+ monthTabs.forEach(tab=>tab.addEventListener('click',()=>showMonth(tab.dataset.monthTab)));let initial=String(new Date().getFullYear()==={{ year }}?new Date().getMonth()+1:1);try{initial=sessionStorage.getItem('powerpay_timesheet_month')||initial}catch(error){};showMonth(initial)
+</script>
 {% endblock %}

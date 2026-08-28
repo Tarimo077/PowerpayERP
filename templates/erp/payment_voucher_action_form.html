@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}<div class="max-w-xl"><div class="card bg-base-100"><form method="post" class="card-body" data-popup-page data-popup-title="{{ title }}">{% csrf_token %}<h2 class="card-title">{{ title }}</h2><p class="text-sm opacity-60">{{ voucher.number }} · {{ voucher.payee }} · KSh {{ voucher.total_amount|floatformat:2 }}</p>{{ form.as_p }}<div class="card-actions justify-end mt-5"><a href="javascript:history.back()" class="btn btn-ghost">Cancel</a><button class="btn btn-primary text-white">Confirm</button></div></form></div></div>{% endblock %}

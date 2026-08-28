@@ -31,6 +31,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware", 
     "erp.middleware.ActiveOrganizationMiddleware",
+    "erp.middleware.ChatPresenceMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 

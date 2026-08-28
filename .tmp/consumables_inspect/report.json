@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Consumable supplies",
+    "address": "A1:D9",
+    "region": "{\"kind\":\"region\",\"sheet\":\"Consumable supplies\",\"address\":\"A1:D9\",\"rows\":9,\"cols\":4,\"nonEmpty\":34,\"blank\":2,\"text\":34,\"maxTextLength\":80,\"preview\":[[\"ITEMS\",\"QUANTITY\",\"PRICE \",\"SOURCE LINK\"],[\"Sugar\",\"2kg\",\"305\",\"https://www.quickmart.co.ke/mumias-sugar-2-kg-1\"],[\"Tissues\",\"10 rolls\",\"299\",\"https://www.quickmart.co.ke/velvex-extra-toilet-tissue-10-pack-67\"],[\"Mop bucket\",\"1pc\",\"335\",\"https://www.quickmart.co.ke/kenpoly-mop-bucket-no.-4-67\"],[\"Mop with stick\",\"1pc\",\"260\",\"https://www.quickmart.co.ke/panda-heavy-floor-mop-with-stick-28\"],[\"cups \",\"dozen\",\"450\",\"https://www.quickmart.co.ke/double-coloured-mug-61\"],[\"Tea bag\",\"1pkt\",\"145\",\"https://www.quickmart.co.ke/eden-tea-bags-200g-catering-65\"],[\"Morning fresh\",\"1pc\",\"209\",\"https://www.quickmart.co.ke/morning-fresh-dishwashing-paste-antibacteria-400g-66\"],[\"Total\",null,\"2003\",null]],\"previewAddress\":\"A1:D9\",\"previewRows\":9,\"previewCols\":4}",
+    "formulas": "{\"kind\":\"formula\",\"sheet\":\"Consumable supplies\",\"address\":\"C9\",\"formula\":\"=SUM(C2:C8)\"}"
+  }
+]

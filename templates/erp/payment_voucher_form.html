@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block page_title %}Create payment voucher{% endblock %}
+{% block content %}
+<div class="max-w-4xl">
+  <div class="card bg-base-100 shadow-sm">
+    <form method="post" enctype="multipart/form-data" class="card-body" data-popup-page data-allow-add-another data-popup-title="Create payment voucher">
+      {% csrf_token %}
+      <h2 class="card-title text-2xl">Create payment voucher</h2>
+      <p class="text-sm opacity-60 mb-2">Record the payee and particulars, then attach any PDF receipts needed for review. The ERP will submit the voucher automatically and assign an approval task to your manager.</p>
+      <div class="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm mb-2"><span class="text-orange-600 font-bold">Automatic approver</span><div class="font-semibold mt-0.5">{{ automatic_approver }}</div><div class="text-xs opacity-60">Your manager can approve the voucher or move it to their manager.</div></div>
+      {{ form.non_field_errors }}
+      <div class="grid sm:grid-cols-2 gap-4">
+        {% for field in form %}<label class="form-control"><span class="label"><span class="label-text">{{ field.label }}</span></span>{{ field }}{{ field.errors }}</label>{% endfor %}
+      </div>
+      <div class="mt-5 flex items-center justify-between gap-3">
+        <div><h3 class="font-bold text-lg">Particulars</h3><p class="text-xs opacity-60">Add one row for each amount included in this voucher.</p></div>
+        <button type="button" id="add-voucher-line" class="btn btn-outline btn-sm border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white"><i class="fa-solid fa-plus"></i> Add line</button>
+      </div>
+      {{ formset.management_form }}{{ formset.non_form_errors }}
+      <div id="voucher-lines" class="space-y-3 mt-3">
+        {% for line in formset %}
+          <div class="voucher-line grid grid-cols-12 gap-3 items-end rounded-xl border border-base-300 bg-base-200/40 p-3">
+            {% for hidden in line.hidden_fields %}{{ hidden }}{% endfor %}
+            <label class="form-control col-span-12 sm:col-span-8"><span class="label"><span class="label-text">Particulars</span></span>{{ line.particulars }}{{ line.particulars.errors }}</label>
+            <label class="form-control col-span-10 sm:col-span-3"><span class="label"><span class="label-text">Amount (KSh)</span></span>{{ line.amount }}{{ line.amount.errors }}</label>
+            <div class="hidden">{{ line.DELETE }}</div><button type="button" class="remove-voucher-line btn btn-ghost btn-square text-error col-span-2 sm:col-span-1" aria-label="Remove line"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        {% endfor %}
+      </div>
+      <template id="empty-voucher-line"><div class="voucher-line grid grid-cols-12 gap-3 items-end rounded-xl border border-base-300 bg-base-200/40 p-3">{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<label class="form-control col-span-12 sm:col-span-8"><span class="label"><span class="label-text">Particulars</span></span>{{ formset.empty_form.particulars }}</label><label class="form-control col-span-10 sm:col-span-3"><span class="label"><span class="label-text">Amount (KSh)</span></span>{{ formset.empty_form.amount }}</label><div class="hidden">{{ formset.empty_form.DELETE }}</div><button type="button" class="remove-voucher-line btn btn-ghost btn-square text-error col-span-2 sm:col-span-1" aria-label="Remove line"><i class="fa-solid fa-trash"></i></button></div></template>
+      <div class="card-actions justify-end mt-5"><a href="javascript:history.back()" class="btn btn-ghost">Cancel</a><button class="btn btn-primary text-white">Create voucher</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

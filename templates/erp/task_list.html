@@ -13,9 +13,7 @@
         {% endfor %}
       </select><button class="btn">Filter</button>
     </form>
-    {% if current_profile.role != 'employee' %}
-      <a href="{% url 'task_create' %}" class="btn btn-primary" data-modal data-modal-title="Assign task">+ Assign task</a>
-    {% endif %}
+    <a href="{% url 'task_create' %}" class="btn btn-primary text-white" data-modal data-modal-title="Assign task">+ Assign task</a>
   </div>
   <div class="card bg-base-100">
     <div class="overflow-x-auto">
@@ -27,6 +25,7 @@
             <th>Priority</th>
             <th>Status</th>
             <th>Due date</th>
+            <th class="text-right">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -47,12 +46,13 @@
                   {{ task.get_priority_display }}
                 </span>
               </td>
-              <td>{{ task.get_status_display }}</td>
+              <td><span class="badge {% if task.status == 'approved' or task.status == 'completed' %}badge-success text-white{% elif task.status == 'rejected' %}badge-error text-white{% elif task.status == 'in_progress' or task.status == 'submitted' %}badge-warning{% else %}badge-ghost{% endif %}">{{ task.get_status_display }}</span></td>
               <td class="{% if task.is_overdue %}text-error font-bold{% endif %}">{{ task.due_date }}</td>
+              <td class="text-right"><div class="flex justify-end gap-3"><a href="{% url 'task_detail' task.pk %}" class="btn btn-sm btn-ghost">View</a>{% if task.can_change_status %}<a href="{% url 'task_status' task.pk %}" data-modal data-modal-title="Change task status" class="btn btn-sm btn-primary text-white">Change status</a>{% endif %}</div></td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="5" class="text-center py-14 opacity-50">No tasks match your filters.</td>
+              <td colspan="6" class="text-center py-14 opacity-50">No tasks match your filters.</td>
             </tr>
           {% endfor %}
         </tbody>

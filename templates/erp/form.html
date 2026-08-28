@@ -6,7 +6,7 @@
   <div class="max-w-3xl">
     <div class="card bg-base-100 shadow-sm">
       <form method="post" enctype="multipart/form-data" class="card-body" data-popup-page data-allow-add-another data-popup-title="{{ title }}">
-        {% csrf_token %}<h2 class="card-title text-2xl mb-3">{{ title }}</h2>{% for field in form %}
+        {% csrf_token %}<h2 class="card-title text-2xl mb-3">{{ title }}</h2>{% if form.non_field_errors %}<div class="alert alert-error text-white mb-3"><i class="fa-solid fa-circle-exclamation"></i><div>{{ form.non_field_errors }}</div></div>{% endif %}{% for field in form %}
           <label class="form-control">
             <span class="label"><span class="label-text">{{ field.label }}</span></span>{{ field }}{% if field.help_text %}
               <span class="text-xs opacity-60 mt-1">{{ field.help_text }}</span>
