@@ -88,6 +88,8 @@ class Task(TenantModel):
     status = models.CharField(max_length=20, choices=STATUSES, default="assigned")
     start_date = models.DateField(default=timezone.localdate)
     due_date = models.DateField()
+    actual_started_at = models.DateTimeField(null=True, blank=True)
+    actual_completed_at = models.DateTimeField(null=True, blank=True)
     attachment = models.FileField(upload_to="task_attachments/%Y/%m/", blank=True)
     def clean(self):
         if self.assigned_to_id and self.assigned_to.organization_id != self.organization_id:
@@ -96,6 +98,17 @@ class Task(TenantModel):
     @property
     def is_overdue(self): 
         return self.due_date < timezone.localdate() and self.status not in ["approved", "completed"]
+
+    def save(self,*args,**kwargs):
+        previous_status=Task.objects.filter(pk=self.pk).values_list("status",flat=True).first() if self.pk else None
+        now=timezone.now(); timestamp_fields=[]
+        if self.status in ["in_progress","submitted","approved","completed"] and not self.actual_started_at and previous_status!=self.status:
+            self.actual_started_at=now; timestamp_fields.append("actual_started_at")
+        if self.status in ["approved","completed"] and not self.actual_completed_at and previous_status!=self.status:
+            self.actual_completed_at=now; timestamp_fields.append("actual_completed_at")
+        if kwargs.get("update_fields") is not None and timestamp_fields:
+            kwargs["update_fields"]=set(kwargs["update_fields"])|set(timestamp_fields)
+        super().save(*args,**kwargs)
 
     def __str__(self): return self.title
 

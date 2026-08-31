@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 import base64
@@ -236,6 +236,7 @@ class TenantIsolationTests(TestCase):
         task=Task.objects.get(title="Prepare report")
         self.assertRedirects(response,reverse("tasks"))
         self.assertEqual(task.assigned_to,manager)
+        self.assertEqual(task.status,"assigned")
         self.assertEqual(mail.outbox[-1].to,["manager@example.com"])
         self.assertIn("New task assigned",mail.outbox[-1].subject)
 
@@ -251,10 +252,13 @@ class TenantIsolationTests(TestCase):
         self.assertContains(page,"Change status")
         popup=self.client.get(reverse("task_status",args=[task.pk]))
         self.assertEqual(popup.status_code,200)
-        self.assertContains(popup,"In Progress")
+        self.assertContains(popup,"Current status")
+        self.assertContains(popup,"Assigned · Not started")
+        self.assertContains(popup,"Start / resume work")
+        self.assertContains(popup,"Submit for review")
         response=self.client.post(reverse("task_status",args=[task.pk]),{"status":"in_progress","note":"Work has started."})
         self.assertRedirects(response,reverse("task_detail",args=[task.pk]))
-        task.refresh_from_db(); self.assertEqual(task.status,"in_progress")
+        task.refresh_from_db(); self.assertEqual(task.status,"in_progress"); self.assertIsNotNone(task.actual_started_at); self.assertIsNone(task.actual_completed_at)
 
     def test_manager_changes_direct_report_task_status_and_employee_is_notified(self):
         manager_user=User.objects.create_user("status-manager",password="testpass123")
@@ -264,15 +268,88 @@ class TenantIsolationTests(TestCase):
         self.client.force_login(manager_user)
         response=self.client.post(reverse("task_status",args=[task.pk]),{"status":"approved","note":"Reviewed and approved."})
         self.assertRedirects(response,reverse("task_detail",args=[task.pk]))
-        task.refresh_from_db(); self.assertEqual(task.status,"approved")
+        task.refresh_from_db(); self.assertEqual(task.status,"approved"); self.assertIsNotNone(task.actual_started_at); self.assertIsNotNone(task.actual_completed_at)
         notice=Notification.objects.get(user=self.u1,title="Task status changed to Approved")
         self.assertEqual(notice.message,"Reviewed and approved.")
 
+    def test_manager_dashboard_has_hierarchy_task_calendar_with_status(self):
+        manager_user=User.objects.create_user("calendar-manager",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager")
+        lead_user=User.objects.create_user("calendar-lead",password="testpass123"); lead=Profile.objects.create(user=lead_user,organization=self.o1,role="manager",manager=manager)
+        employee_user=User.objects.create_user("calendar-employee",password="testpass123"); employee=Profile.objects.create(user=employee_user,organization=self.o1,role="employee",manager=lead)
+        unrelated_user=User.objects.create_user("calendar-unrelated",password="testpass123"); unrelated=Profile.objects.create(user=unrelated_user,organization=self.o1,role="employee")
+        Task.objects.create(organization=self.o1,title="Lead planning",assigned_to=lead,created_by=manager_user,status="in_progress",priority="medium",due_date=timezone.localdate()+timedelta(days=2))
+        Task.objects.create(organization=self.o1,title="Employee field work",assigned_to=employee,created_by=lead_user,status="submitted",priority="high",due_date=timezone.localdate()+timedelta(days=3))
+        Task.objects.create(organization=self.o1,title="Manager follow-up",assigned_to=manager,created_by=manager_user,status="rejected",priority="low",due_date=timezone.localdate()+timedelta(days=1))
+        Task.objects.create(organization=self.o1,title="Unrelated work",assigned_to=unrelated,created_by=unrelated_user,status="assigned",due_date=timezone.localdate()+timedelta(days=1))
+        self.client.force_login(manager_user); response=self.client.get(reverse("dashboard")); self.assertEqual(response.status_code,200); self.assertContains(response,"Team task calendar")
+        self.assertEqual(response.context["team_member_count"],2); events=response.context["team_task_events"]; self.assertEqual({event["title"] for event in events},{"Lead planning","Employee field work"}); self.assertEqual({event["status_label"] for event in events},{"In Progress","Submitted"})
+        self.assertEqual([(event["title"],event["status_label"]) for event in response.context["task_events"]],[("Manager follow-up","Rejected")])
+        self.assertContains(response,'id="team-task-calendar-events"'); self.assertContains(response,"event.status_label")
+        self.assertContains(response,'data-calendar-tab="personal"'); self.assertContains(response,'data-calendar-tab="team"')
+        self.assertContains(response,'data-calendar-panel="team"')
+
+    def test_employee_can_edit_and_delete_own_draft_timesheet(self):
+        sheet=Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,8,1),period_end=date(2026,8,31),status="draft",service_contract="Original")
+        entry=TimesheetEntry.objects.create(timesheet=sheet,date=date(2026,8,3),task_performed="Draft activity",hours=8,days_worked=1)
+        self.client.force_login(self.u1)
+        response=self.client.post(reverse("timesheet_edit",args=[sheet.pk]),{"service_contract":"Updated contract","financing":"Internal","contract_number":"TS-22","country":"Kenya","place_of_assignment":"Nairobi","initial_budget_days":"30"})
+        self.assertRedirects(response,reverse("timesheet_detail",args=[sheet.pk]))
+        sheet.refresh_from_db()
+        self.assertEqual(sheet.service_contract,"Updated contract")
+        self.assertEqual(sheet.period_start,date(2026,8,1))
+        response=self.client.post(reverse("timesheet_delete",args=[sheet.pk]))
+        self.assertRedirects(response,reverse("timesheets"))
+        self.assertFalse(Timesheet.objects.filter(pk=sheet.pk).exists())
+        self.assertFalse(TimesheetEntry.objects.filter(pk=entry.pk).exists())
+
+    def test_popup_clones_remove_source_hidden_class(self):
+        self.client.force_login(self.u1)
+        response=self.client.get(reverse("dashboard"))
+        self.assertContains(response,"copy.classList.remove('hidden')")
+        self.assertContains(response,"form.getAttribute('action')||location.href")
+        self.assertNotContains(response,"fetch(form.action||location.href")
+
+    def test_timesheet_year_filter_is_unique_and_includes_recorded_years(self):
+        Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2022,4,1),period_end=date(2022,4,30),status="draft")
+        Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,5,1),period_end=date(2026,5,31),status="draft")
+        self.client.force_login(self.u1)
+        response=self.client.get(reverse("timesheets"),{"year":"2026"})
+        self.assertEqual(response.context["year_options"],[2022,2025,2026,2027])
+        self.assertEqual(response.context["year_options"].count(2026),1)
+        self.assertContains(response,'value="2026" selected',count=1)
+
+    def test_submitted_timesheet_cannot_be_edited_or_deleted(self):
+        sheet=Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,8,1),period_end=date(2026,8,31),status="submitted",service_contract="Locked")
+        self.client.force_login(self.u1)
+        response=self.client.get(reverse("timesheet_edit",args=[sheet.pk]))
+        self.assertRedirects(response,reverse("timesheet_detail",args=[sheet.pk]))
+        response=self.client.post(reverse("timesheet_delete",args=[sheet.pk]))
+        self.assertRedirects(response,reverse("timesheet_detail",args=[sheet.pk]))
+        sheet.refresh_from_db()
+        self.assertEqual(sheet.service_contract,"Locked")
+
+    def test_manager_cannot_see_employee_drafts_but_can_see_submitted_timesheets(self):
+        manager_user=User.objects.create_user("visibility-manager",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager")
+        self.p1.manager=manager; self.p1.save(update_fields=["manager"])
+        draft=Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,6,1),period_end=date(2026,6,30),status="draft",service_contract="Private draft")
+        submitted=Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,7,1),period_end=date(2026,7,31),status="submitted",requested_approver=manager,service_contract="Ready for review")
+        own_draft=Timesheet.objects.create(organization=self.o1,employee=manager,period_start=date(2026,8,1),period_end=date(2026,8,31),status="draft",service_contract="Manager own draft")
+        self.client.force_login(manager_user)
+        response=self.client.get(reverse("timesheets"),{"year":"2026"})
+        self.assertNotIn(draft,list(response.context["timesheets"])); self.assertIn(submitted,list(response.context["timesheets"])); self.assertIn(own_draft,list(response.context["timesheets"]))
+        self.assertRedirects(self.client.get(reverse("timesheet_detail",args=[draft.pk])),reverse("timesheets"))
+        self.assertRedirects(self.client.get(reverse("timesheet_export",args=[draft.pk,"pdf"])),reverse("timesheets"))
+        self.assertEqual(self.client.get(reverse("timesheet_detail",args=[submitted.pk])).status_code,200)
+        delete_response=self.client.post(reverse("timesheet_delete",args=[draft.pk])); self.assertRedirects(delete_response,reverse("timesheet_detail",args=[draft.pk]),fetch_redirect_response=False); self.assertTrue(Timesheet.objects.filter(pk=draft.pk).exists())
+
     def test_new_timesheet_prefills_assigned_tasks_and_employee_can_edit_them(self):
-        assigned=Task.objects.create(organization=self.o1,title="Prepare payroll",description="Process the monthly payroll.",assigned_to=self.p1,created_by=self.u1,status="assigned",start_date=date(2026,8,3),due_date=date(2026,8,7))
+        worked_at=timezone.make_aware(datetime(2026,8,3,9,0))
+        assigned=Task.objects.create(organization=self.o1,title="Prepare payroll",description="Process the monthly payroll.",assigned_to=self.p1,created_by=self.u1,status="completed",start_date=date(2026,8,3),due_date=date(2026,8,7),actual_started_at=worked_at,actual_completed_at=worked_at)
         outside=Task.objects.create(organization=self.o1,title="Later task",assigned_to=self.p1,created_by=self.u1,status="assigned",start_date=date(2026,9,1),due_date=date(2026,9,2))
         manager_user=User.objects.create_user("timesheet-manager",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager"); self.p1.manager=manager; self.p1.save(update_fields=["manager"])
         self.client.force_login(self.u1)
+        create_page=self.client.get(reverse("timesheet_create"))
+        self.assertEqual(create_page.context["form"].fields["place_of_assignment"].initial,"Kenya")
         response=self.client.post(reverse("timesheet_create"),{"month":"8","year":"2026","service_contract":"Digital energy services","financing":"Internal","contract_number":"TS-001","country":"Kenya","place_of_assignment":"Nairobi","initial_budget_days":"120"})
         sheet=Timesheet.objects.get(employee=self.p1)
         self.assertRedirects(response,reverse("timesheet_detail",args=[sheet.pk]))
@@ -280,7 +357,7 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(sheet.entries.count(),1)
         entry=sheet.entries.get()
         self.assertEqual(entry.task,assigned)
-        self.assertEqual(entry.task_performed,"Prepare payroll")
+        self.assertEqual(entry.task_performed,"Prepare payroll: Process the monthly payroll.")
         self.assertEqual(entry.hours,Decimal("8")); self.assertEqual(entry.days_worked,Decimal("1")); self.assertEqual(entry.location,"Kenya")
         self.assertFalse(sheet.entries.filter(task=outside).exists())
 
@@ -318,6 +395,16 @@ class TenantIsolationTests(TestCase):
         exported=self.client.post(reverse("timesheet_export_year",args=[sheet.pk]),{"months":["3","6"]}); self.assertEqual(exported.status_code,200)
         from openpyxl import load_workbook
         workbook=load_workbook(BytesIO(exported.content),data_only=False); self.assertEqual(workbook.sheetnames,["TS - March 26","TS - June 26"]); self.assertIn("Unplanned stakeholder workshop",workbook["TS - March 26"]["H25"].value)
+
+    def test_timesheet_prefill_uses_actual_task_work_dates(self):
+        started=timezone.make_aware(datetime(2026,8,7,9,0)); completed=timezone.make_aware(datetime(2026,8,11,17,0))
+        task=Task.objects.create(organization=self.o1,title="Field verification",description="Verify installation sites.",assigned_to=self.p1,created_by=self.u1,status="completed",start_date=date(2026,8,1),due_date=date(2026,8,20),actual_started_at=started,actual_completed_at=completed)
+        self.client.force_login(self.u1)
+        response=self.client.post(reverse("timesheet_create"),{"month":"8","year":"2026","service_contract":"Field work","financing":"Internal","contract_number":"TS-DATES","country":"Kenya","place_of_assignment":"Kenya","initial_budget_days":"30"})
+        sheet=Timesheet.objects.get(employee=self.p1,period_start=date(2026,8,1))
+        self.assertRedirects(response,reverse("timesheet_detail",args=[sheet.pk]))
+        self.assertEqual(list(sheet.entries.filter(task=task).order_by("date").values_list("date",flat=True)),[date(2026,8,7),date(2026,8,10),date(2026,8,11)])
+        self.assertTrue(all(entry.task_performed=="Field verification: Verify installation sites." for entry in sheet.entries.filter(task=task)))
 
     def test_employee_can_remove_a_prefilled_timesheet_task(self):
         task=Task.objects.create(organization=self.o1,title="Removable task",assigned_to=self.p1,created_by=self.u1,status="assigned",start_date=date(2026,8,3),due_date=date(2026,8,4))
@@ -362,6 +449,34 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(mail.outbox[-1].to,["employee@example.com"])
         hierarchy=self.client.get(reverse("employees")); self.assertContains(hierarchy,"Hierarchy tree"); self.assertContains(hierarchy,"Reports up")
 
+    def test_senior_manager_can_request_timesheet_from_indirect_report(self):
+        senior_user=User.objects.create_user("request-senior",password="testpass123"); senior=Profile.objects.create(user=senior_user,organization=self.o1,role="manager")
+        manager_user=User.objects.create_user("request-middle",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager",manager=senior)
+        self.p1.manager=manager; self.p1.save(update_fields=["manager"])
+        self.client.force_login(senior_user)
+        employee_page=self.client.get(reverse("employees"))
+        self.assertContains(employee_page,f'{reverse("timesheet_request")}?employee={self.p1.pk}')
+        request_page=self.client.get(f'{reverse("timesheet_request")}?employee={self.p1.pk}')
+        self.assertEqual(request_page.context["form"].fields["employee"].initial,[str(self.p1.pk)])
+        response=self.client.post(reverse("timesheet_request"),{"employee":self.p1.pk,"month":"12","year":"2026","due_date":"2026-12-04","instructions":"Submit the monthly record."})
+        self.assertRedirects(response,reverse("timesheets"))
+        sheet=Timesheet.objects.get(employee=self.p1,period_start=date(2026,12,1))
+        self.assertEqual(sheet.requested_approver,senior)
+        self.assertEqual(sheet.request_task.created_by,senior_user)
+
+    def test_manager_can_request_multiple_months_from_multiple_employees(self):
+        manager_user=User.objects.create_user("batch-manager",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager")
+        second_user=User.objects.create_user("batch-employee",email="batch@example.com",password="testpass123"); second=Profile.objects.create(user=second_user,organization=self.o1,role="employee",manager=manager)
+        self.u1.email="first@example.com"; self.u1.save(update_fields=["email"]); self.p1.manager=manager; self.p1.save(update_fields=["manager"])
+        self.client.force_login(manager_user)
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            response=self.client.post(reverse("timesheet_request"),{"employee":[self.p1.pk,second.pk],"month":["10","11"],"year":"2026","due_date":"2026-10-05","instructions":"Complete both months."})
+        self.assertRedirects(response,reverse("timesheets"))
+        sheets=Timesheet.objects.filter(employee__in=[self.p1,second],period_start__year=2026,period_start__month__in=[10,11])
+        self.assertEqual(sheets.count(),4)
+        self.assertEqual(Task.objects.filter(created_by=manager_user,title__startswith="Complete ",assigned_to__in=[self.p1,second]).count(),4)
+        self.assertEqual(len(mail.outbox),4)
+
     def test_item_request_routes_up_hierarchy_and_exports_all_formats(self):
         senior_user=User.objects.create_user("supply-senior",email="senior@example.com",password="testpass123"); senior=Profile.objects.create(user=senior_user,organization=self.o1,role="manager")
         manager_user=User.objects.create_user("supply-manager",email="manager@example.com",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager",manager=senior)
@@ -379,6 +494,13 @@ class TenantIsolationTests(TestCase):
             self.client.post(reverse("item_request_action",args=[obj.pk,"escalate"]),{"notes":"Please confirm budget."})
         obj.refresh_from_db(); obj.approval_task.refresh_from_db(); self.assertEqual(obj.requested_approver,senior); self.assertEqual(obj.approval_task.assigned_to,senior)
         self.client.force_login(senior_user); self.client.post(reverse("item_request_action",args=[obj.pk,"approve"]),{"notes":"Approved."}); obj.refresh_from_db(); obj.approval_task.refresh_from_db(); self.assertEqual(obj.status,"approved"); self.assertEqual(obj.approval_task.status,"completed")
+
+    def test_rejected_item_request_completes_its_review_task(self):
+        manager_user=User.objects.create_user("rejecting-manager",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager")
+        task=Task.objects.create(organization=self.o1,title="Review supplies",assigned_to=manager,created_by=self.u1,priority="medium",status="assigned",due_date=timezone.localdate()+timedelta(days=2))
+        obj=ItemRequest.objects.create(organization=self.o1,number="IR-2026-0099",requested_by=self.u1,purpose="Office supplies",needed_by=timezone.localdate()+timedelta(days=7),requested_approver=manager,approval_task=task,status="submitted")
+        self.client.force_login(manager_user); response=self.client.post(reverse("item_request_action",args=[obj.pk,"reject"]),{"notes":"Revise the quantities."})
+        self.assertRedirects(response,reverse("item_request_detail",args=[obj.pk])); obj.refresh_from_db(); task.refresh_from_db(); self.assertEqual(obj.status,"rejected"); self.assertEqual(task.status,"completed")
 
     def test_timesheet_csv_export_is_not_available(self):
         sheet=Timesheet.objects.create(organization=self.o1,employee=self.p1,period_start=date(2026,12,1),period_end=date(2026,12,31)); self.client.force_login(self.u1)
@@ -494,6 +616,21 @@ class TenantIsolationTests(TestCase):
         response=self.client.post(reverse("leave_allocation_create"),{"employee":self.p2.pk,"leave_type":"annual","year":2026,"allocated_days":20,"notes":""})
         self.assertEqual(response.status_code,200)
         self.assertFalse(LeaveAllocation.objects.filter(organization=self.o2,employee=self.p2).exists())
+
+    def test_leave_request_can_move_up_the_management_chain(self):
+        senior_user=User.objects.create_user("leave-senior",email="senior@example.com",password="testpass123"); senior=Profile.objects.create(user=senior_user,organization=self.o1,role="manager")
+        manager_user=User.objects.create_user("leave-middle",email="middle@example.com",password="testpass123"); manager=Profile.objects.create(user=manager_user,organization=self.o1,role="manager",manager=senior)
+        self.p1.manager=manager; self.p1.save(update_fields=["manager"])
+        LeaveAllocation.objects.create(organization=self.o1,employee=self.p1,leave_type="annual",year=2026,allocated_days=10,assigned_by=manager_user)
+        leave=LeaveRequest.objects.create(organization=self.o1,employee=self.p1,requested_approver=manager,leave_type="annual",start_date=date(2026,9,7),end_date=date(2026,9,9),days=3,reason="Family trip")
+        self.client.force_login(manager_user)
+        popup=self.client.get(reverse("leave_request_review",args=[leave.pk])); self.assertContains(popup,"Move to my manager")
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            response=self.client.post(reverse("leave_request_review",args=[leave.pk]),{"decision":"escalate","message":"Please review."})
+        self.assertRedirects(response,reverse("leave_dashboard")); leave.refresh_from_db(); self.assertEqual(leave.status,"pending"); self.assertEqual(leave.requested_approver,senior); self.assertEqual(mail.outbox[-1].to,["senior@example.com"])
+        self.client.force_login(senior_user)
+        popup=self.client.get(reverse("leave_request_review",args=[leave.pk])); self.assertNotContains(popup,"Move to my manager")
+        self.client.post(reverse("leave_request_review",args=[leave.pk]),{"decision":"approved","message":"Approved."}); leave.refresh_from_db(); self.assertEqual(leave.status,"approved"); self.assertEqual(leave.reviewed_by,senior_user)
 
     def test_leave_request_cannot_exceed_balance_or_overlap(self):
         manager_user=User.objects.create_user("leave-manager",password="testpass123")

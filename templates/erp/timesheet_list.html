@@ -10,9 +10,7 @@
     <div class="flex flex-wrap justify-end gap-3">
       <form method="get">
         <select name="year" class="select select-bordered" onchange="this.form.submit()">
-          <option>{{ year }}</option>
-          <option value="{{ year|add:'-1' }}">{{ year|add:'-1' }}</option>
-          <option value="{{ year|add:'1' }}">{{ year|add:'1' }}</option>
+          {% for option_year in year_options %}<option value="{{ option_year }}" {% if option_year == year %}selected{% endif %}>{{ option_year }}</option>{% endfor %}
         </select>
       </form>
       {% if export_anchor %}
@@ -116,7 +114,7 @@
                   </td>
                   <td class="text-right">
                     <div class="flex justify-end gap-3">
-                      <a class="btn btn-sm btn-primary text-white" href="{% url 'timesheet_detail' sheet.pk %}">Open sheet</a><a class="btn btn-sm btn-outline" href="{% url 'timesheet_export_year' sheet.pk %}" data-modal data-modal-title="Choose months to export" title="Choose months to export"><i class="fa-solid fa-file-excel"></i></a>
+                      <a class="btn btn-sm btn-primary text-white" href="{% url 'timesheet_detail' sheet.pk %}">Open sheet</a>{% if sheet.can_edit_draft %}<a class="btn btn-sm btn-outline" href="{% url 'timesheet_edit' sheet.pk %}" data-modal data-modal-title="Edit draft timesheet" title="Edit draft"><i class="fa-solid fa-pen"></i></a>{% endif %}<a class="btn btn-sm btn-outline" href="{% url 'timesheet_export_year' sheet.pk %}" data-modal data-modal-title="Choose months to export" title="Choose months to export"><i class="fa-solid fa-file-excel"></i></a>
                     </div>
                   </td>
                 </tr>

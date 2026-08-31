@@ -321,17 +321,21 @@
             submitter?.classList.add('loading'); 
             if(submitter)submitter.disabled=true
             try{
-              const response=await fetch(form.action||location.href,{method:(form.method||'post').toUpperCase(),body:data,credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+              const formAction=form.getAttribute('action')||location.href
+              const response=await fetch(formAction,{method:(form.method||'post').toUpperCase(),body:data,credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
               const html=await response.text(),doc=modalParser.parseFromString(html,'text/html')
               if(response.redirected){const notices=[...doc.querySelectorAll('[data-app-message]')].map(item=>({type:item.dataset.type,text:item.dataset.text}));if(submitter?.name==='_add_another'){const nextForm=doc.querySelector('main form[data-popup-page],main form[data-popup-form]');if(nextForm){showForm(nextForm,formModalTitle.textContent,response.url);if(notices.length){const notice=document.createElement('div');notice.className='alert bg-emerald-50 text-emerald-900 border border-emerald-200 mb-5';notice.innerHTML='<i class="fa-solid fa-circle-check"></i><span></span>';notice.querySelector('span').textContent=notices[0].text;formModalBody.prepend(notice);setTimeout(()=>notice.remove(),3000)}return}}if(notices.length)sessionStorage.setItem('powerpay_messages',JSON.stringify(notices));formModal.close();location.reload();return}
               const replacement=doc.querySelector('main form')
-              if(replacement){if(!replacement.action)replacement.action=form.action;formModalBody.replaceChildren(replacement);prepareModalActions(replacement);bindModalForm(replacement);initializePopupForm(replacement)}else{formModal.close();location.reload()}
+              if(replacement){if(!replacement.getAttribute('action'))replacement.setAttribute('action',formAction);formModalBody.replaceChildren(replacement);prepareModalActions(replacement);bindModalForm(replacement);initializePopupForm(replacement)}else{formModal.close();location.reload()}
             }catch(error){submitter?.classList.remove('loading');if(submitter)submitter.disabled=false;alert('The form could not be submitted. Please try again.')}
           })
         }
         function showForm(form,title,action){
-          const copy=form.cloneNode(true); 
-          if(action)copy.action=action
+          const copy=form.cloneNode(true);
+          // Inline popup triggers hide their source form on the page. The modal
+          // clone must be visible even when the source itself carries `hidden`.
+          copy.classList.remove('hidden');
+          if(action)copy.setAttribute('action',action)
           formModalTitle.textContent=title||copy.querySelector('h2,h3')?.textContent?.trim()||'Form'
           copy.querySelector('h2,h3')?.remove(); 
           formModalBody.replaceChildren(copy);prepareModalActions(copy);bindModalForm(copy);initializePopupForm(copy);if(!formModal.open)formModal.showModal();copy.querySelector('input:not([type=hidden]),select,textarea')?.focus()

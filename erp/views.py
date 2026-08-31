@@ -29,6 +29,17 @@ def _profile(request):
     return get_object_or_404(Profile.objects.select_related("organization","department"),user=request.user)
 
 
+def _reporting_descendant_ids(manager):
+    relationships=list(Profile.objects.filter(organization=manager.organization,user__is_active=True).values_list("id","manager_id")); children={}
+    for profile_id,manager_id in relationships: children.setdefault(manager_id,[]).append(profile_id)
+    descendants=[]; queue=list(children.get(manager.id,[])); seen={manager.id}
+    while queue:
+        profile_id=queue.pop(0)
+        if profile_id in seen: continue
+        seen.add(profile_id); descendants.append(profile_id); queue.extend(children.get(profile_id,[]))
+    return descendants
+
+
 def _audit(request,action,obj):
     p=getattr(request.user,"profile",None)
     AuditLog.objects.create(organization=getattr(p,"organization",None),actor=request.user,action=action,entity_type=obj.__class__.__name__,entity_id=str(obj.pk),ip_address=request.META.get("REMOTE_ADDR"))
@@ -62,8 +73,8 @@ def dashboard(request):
 
     if p.role=="employee": 
         tasks=tasks.filter(Q(assigned_to=p)|Q(created_by=request.user)).distinct()
-    elif p.role=="manager": 
-        tasks=tasks.filter(Q(assigned_to=p)|Q(created_by=request.user)|Q(department=p.department)|Q(assigned_to__manager=p)).distinct()
+    elif p.role=="manager":
+        team_ids=_reporting_descendant_ids(p); tasks=tasks.filter(Q(assigned_to=p)|Q(created_by=request.user)|Q(assigned_to_id__in=team_ids)).distinct()
 
     sheets=Timesheet.objects.filter(organization=org)
 
@@ -71,12 +82,16 @@ def dashboard(request):
         sheets=sheets.filter(employee=p)
 
     elif p.role=="manager": 
-        sheets=sheets.filter(Q(employee__department=p.department)|Q(employee__manager=p)).distinct()
+        sheets=sheets.filter(Q(employee=p)|Q(employee_id__in=team_ids,status__in=["submitted","approved","rejected"]))
 
-    stats=[("Active tasks",tasks.exclude(status__in=["completed","approved"]).count()),("Overdue",tasks.filter(due_date__lt=timezone.localdate()).exclude(status__in=["completed","approved"]).count()),("Pending approvals",sheets.filter(status="submitted").count()),("Team members",Profile.objects.filter(organization=org,user__is_active=True).count() if p.role=="admin" else Profile.objects.filter(manager=p).count())]
-    calendar_tasks=tasks.exclude(status__in=["completed","approved"]).select_related("assigned_to__user")
-    task_events=[{"title":task.title,"start":task.start_date.isoformat(),"due":task.due_date.isoformat(),"priority":task.priority,"url":reverse("task_detail",args=[task.pk]),"assignee":str(task.assigned_to)} for task in calendar_tasks]
-    return render(request,"erp/dashboard.html",{"stats":stats,"tasks":tasks.select_related("assigned_to__user")[:8],"timesheets":sheets.select_related("employee__user")[:6],"task_events":task_events})
+    stats=[("Active tasks",tasks.exclude(status__in=["completed","approved"]).count()),("Overdue",tasks.filter(due_date__lt=timezone.localdate()).exclude(status__in=["completed","approved"]).count()),("Pending approvals",sheets.filter(status="submitted").count()),("Team members",Profile.objects.filter(organization=org,user__is_active=True).count() if p.role=="admin" else len(team_ids) if p.role=="manager" else 0)]
+    calendar_tasks=(Task.objects.filter(organization=org,assigned_to=p) if p.role in ["employee","manager"] else tasks).exclude(status__in=["completed","approved"]).select_related("assigned_to__user")
+    def event(task): return {"title":task.title,"start":task.start_date.isoformat(),"due":task.due_date.isoformat(),"priority":task.priority,"status":task.status,"status_label":task.get_status_display(),"url":reverse("task_detail",args=[task.pk]),"assignee":str(task.assigned_to)}
+    task_events=[event(task) for task in calendar_tasks]; team_task_events=[]; team_member_count=0
+    if p.role=="manager":
+        team_ids=_reporting_descendant_ids(p); team_member_count=len(team_ids); team_tasks=Task.objects.filter(organization=org,assigned_to_id__in=team_ids).exclude(status__in=["completed","approved"]).select_related("assigned_to__user")
+        team_task_events=[event(task) for task in team_tasks]
+    return render(request,"erp/dashboard.html",{"stats":stats,"tasks":tasks.select_related("assigned_to__user")[:8],"timesheets":sheets.select_related("employee__user")[:6],"task_events":task_events,"team_task_events":team_task_events,"team_member_count":team_member_count})
 
 @login_required
 def storyboard(request):
@@ -251,6 +266,8 @@ def task_create(request):
         obj=form.save(False)
         obj.organization=p.organization
         obj.created_by=request.user
+        # A newly delegated task has not started until its assignee says so.
+        obj.status="assigned"
         obj.full_clean()
         obj.save()
         Notification.objects.create(user=obj.assigned_to.user,title="New task assigned",message=obj.title,url=f"/tasks/{obj.pk}/")
@@ -293,7 +310,7 @@ def _task_status_choices(task,profile):
     if hasattr(task,"payment_voucher_approval") or hasattr(task,"item_request_approval"): return []
     if profile.role=="employee":
         if task.assigned_to_id!=profile.id: return []
-        allowed={"pending":["in_progress"],"assigned":["in_progress"],"in_progress":["submitted"],"rejected":["in_progress","submitted"]}.get(task.status,[])
+        allowed={"pending":["in_progress","submitted"],"assigned":["in_progress","submitted"],"in_progress":["submitted"],"rejected":["in_progress","submitted"]}.get(task.status,[])
     elif profile.role=="manager":
         in_scope=task.assigned_to_id==profile.id or task.created_by_id==profile.user_id or task.assigned_to.manager_id==profile.id or (profile.department_id and task.department_id==profile.department_id)
         if not in_scope: return []
@@ -301,6 +318,8 @@ def _task_status_choices(task,profile):
     elif profile.role=="admin": allowed=[value for value,_ in Task.STATUSES if value!=task.status]
     else: return []
     labels=dict(Task.STATUSES)
+    if profile.role=="employee":
+        labels.update({"in_progress":"Start / resume work","submitted":"Submit for review"})
     return [(value,labels[value]) for value in allowed]
 
 @login_required
@@ -310,16 +329,23 @@ def timesheets(request):
     if p.role=="employee": 
         qs=qs.filter(employee=p)
     elif p.role=="manager": 
-        scope=Q(employee=p)|Q(employee__manager=p)|Q(requested_approver=p)
-        if p.department_id: scope|=Q(employee__department=p.department)
-        qs=qs.filter(scope).distinct()
+        team_ids=_reporting_descendant_ids(p)
+        qs=qs.filter(Q(employee=p)|(~Q(status="draft")&(Q(employee_id__in=team_ids)|Q(requested_approver=p)))).distinct()
     try: year=int(request.GET.get("year",timezone.localdate().year))
     except (TypeError,ValueError): year=timezone.localdate().year
-    year=max(2000,min(2100,year)); qs=qs.filter(period_start__year=year)
-    rows=list(qs); months=[]
+    year=max(2000,min(2100,year))
+    current_year=timezone.localdate().year
+    recorded_years=set(qs.order_by().values_list("period_start__year",flat=True).distinct())
+    year_options=sorted({current_year-1,current_year,current_year+1,year,*recorded_years})
+    qs=qs.filter(period_start__year=year)
+    rows=list(qs)
+    for sheet in rows:
+        sheet.can_edit_draft=sheet.status=="draft" and _can_edit_timesheet(sheet,p)
+        sheet.can_delete_draft=sheet.status=="draft" and _can_delete_timesheet(sheet,p)
+    months=[]
     for month in range(1,13): months.append({"number":month,"name":calendar.month_name[month],"short":calendar.month_abbr[month],"timesheets":[sheet for sheet in rows if sheet.period_start.month==month]})
     export_anchor=next((sheet for sheet in rows if sheet.employee_id==p.id),None)
-    return render(request,"erp/timesheet_list.html",{"timesheets":rows,"months":months,"year":year,"export_anchor":export_anchor})
+    return render(request,"erp/timesheet_list.html",{"timesheets":rows,"months":months,"year":year,"year_options":year_options,"export_anchor":export_anchor})
 
 @login_required
 def timesheet_create(request):
@@ -331,10 +357,8 @@ def timesheet_create(request):
         obj.organization=p.organization
         obj.employee=p
         obj.save()
-        assigned_tasks=Task.objects.filter(organization=p.organization,assigned_to=p,start_date__lte=obj.period_end,due_date__gte=obj.period_start).exclude(status="pending")
-        prefilled=[]
-        for task in assigned_tasks:
-            prefilled.append(TimesheetEntry(timesheet=obj,date=max(task.start_date,obj.period_start),task=task,task_performed=task.title,hours=8,days_worked=1,location=obj.country,description=task.description))
+        assigned_tasks=Task.objects.filter(organization=p.organization,assigned_to=p,actual_started_at__date__lte=obj.period_end).filter(Q(actual_completed_at__isnull=True)|Q(actual_completed_at__date__gte=obj.period_start))
+        prefilled=_prefilled_timesheet_entries(obj,assigned_tasks)
         if prefilled: TimesheetEntry.objects.bulk_create(prefilled)
         _audit(request,"timesheet_created",obj)
         messages.success(request,f"Timesheet created with {len(prefilled)} assigned task{'s' if len(prefilled)!=1 else ''} prefilled. Add hours and adjust the rows before submitting.")
@@ -343,13 +367,75 @@ def timesheet_create(request):
     return render(request,"erp/form.html",{"form":form,"title":"New timesheet","submit":"Create timesheet"})
 
 
+def _timesheet_task_activity(task):
+    description=(task.description or "").strip()
+    return f"{task.title}: {description}" if description else task.title
+
+
+def _prefilled_timesheet_entries(timesheet,tasks):
+    entries=[]; today=timezone.localdate()
+    for task in tasks:
+        if not task.actual_started_at: continue
+        started=timezone.localdate(task.actual_started_at)
+        finished=timezone.localdate(task.actual_completed_at) if task.actual_completed_at else today
+        first=max(started,timesheet.period_start); last=min(finished,timesheet.period_end)
+        if first>last: continue
+        for offset in range((last-first).days+1):
+            work_date=first+timedelta(days=offset)
+            if work_date.weekday()>=5: continue
+            entries.append(TimesheetEntry(timesheet=timesheet,date=work_date,task=task,task_performed=_timesheet_task_activity(task),hours=8,days_worked=1,location=timesheet.country,description=task.description))
+    return entries
+
+
+@login_required
+def timesheet_edit(request,pk):
+    p=_profile(request)
+    obj=get_object_or_404(Timesheet,pk=pk,organization=p.organization)
+    if obj.status!="draft" or not _can_edit_timesheet(obj,p):
+        messages.error(request,"Only an accessible draft timesheet can be edited.")
+        return redirect("timesheet_detail",pk=pk)
+    form=TimesheetForm(request.POST or None,request.FILES or None,organization=p.organization,employee=obj.employee,instance=obj)
+    if request.method=="POST" and form.is_valid():
+        updated=form.save(False)
+        updated.organization=p.organization
+        updated.employee=obj.employee
+        updated.save()
+        _audit(request,"timesheet_updated",updated)
+        messages.success(request,"Draft timesheet updated.")
+        return redirect("timesheet_detail",pk=pk)
+    return render(request,"erp/form.html",{"form":form,"title":"Edit draft timesheet","submit":"Save changes"})
+
+
+@login_required
+@require_POST
+def timesheet_delete(request,pk):
+    p=_profile(request)
+    obj=get_object_or_404(Timesheet.objects.select_related("employee__user","request_task"),pk=pk,organization=p.organization)
+    if obj.status!="draft" or not _can_delete_timesheet(obj,p):
+        messages.error(request,"Only an accessible draft timesheet can be deleted.")
+        return redirect("timesheet_detail",pk=pk)
+    label=f"{obj.period_start:%B %Y} timesheet for {obj.employee}"
+    request_task=obj.request_task
+    _audit(request,"timesheet_deleted",obj)
+    if request_task and request_task.status not in ["approved","completed"]:
+        request_task.status="completed"
+        request_task.save(update_fields=["status","updated_at"])
+    employee_user=obj.employee.user
+    actor_user_id=request.user.id
+    obj.delete()
+    if employee_user.id!=actor_user_id:
+        Notification.objects.create(user=employee_user,title="Draft timesheet deleted",message=label,url="/timesheets/")
+    messages.info(request,f"{label} was deleted.")
+    return redirect("timesheets")
+
+
 @login_required
 def timesheet_detail(request,pk):
     p=_profile(request)
     obj=get_object_or_404(Timesheet.objects.prefetch_related("entries"),pk=pk,organization=p.organization)
     if p.role=="employee" and obj.employee_id!=p.id: 
         return redirect("timesheets")
-    if p.role=="manager" and obj.employee_id!=p.id and not (obj.employee.manager_id==p.id or obj.requested_approver_id==p.id or (p.department_id and obj.employee.department_id==p.department_id)):
+    if p.role=="manager" and not _manager_can_view_timesheet(obj,p):
         return redirect("timesheets")
     form=EntryForm(request.POST or None,request.FILES or None,organization=p.organization,employee=obj.employee)
 
@@ -371,7 +457,7 @@ def timesheet_detail(request,pk):
     cumulative=TimesheetEntry.objects.filter(timesheet__organization=p.organization,timesheet__employee=obj.employee,timesheet__period_start__lte=obj.period_end).aggregate(total=Sum("days_worked"))["total"] or 0
     remaining=(obj.initial_budget_days-cumulative) if obj.initial_budget_days is not None else None
     consumption=(cumulative/obj.initial_budget_days*100) if obj.initial_budget_days else None
-    return render(request,"erp/timesheet_detail.html",{"timesheet":obj,"form":form,"daily_rows":daily_rows,"cumulative_days":cumulative,"remaining_days":remaining,"consumption_rate":consumption,"can_review":_can_review_timesheet(obj,p),"can_edit":can_edit,"is_owner":obj.employee_id==p.id})
+    return render(request,"erp/timesheet_detail.html",{"timesheet":obj,"form":form,"daily_rows":daily_rows,"cumulative_days":cumulative,"remaining_days":remaining,"consumption_rate":consumption,"can_review":_can_review_timesheet(obj,p),"can_edit":can_edit,"can_edit_draft":obj.status=="draft" and can_edit,"can_delete_draft":obj.status=="draft" and _can_delete_timesheet(obj,p),"is_owner":obj.employee_id==p.id})
 
 
 @login_required
@@ -444,11 +530,23 @@ def _can_review_timesheet(timesheet,profile):
     return profile.role=="manager" and timesheet.requested_approver_id==profile.id
 
 
+def _manager_can_view_timesheet(timesheet,profile):
+    if timesheet.employee_id==profile.id: return True
+    if timesheet.status=="draft": return False
+    return timesheet.requested_approver_id==profile.id or timesheet.employee_id in _reporting_descendant_ids(profile)
+
+
 def _can_edit_timesheet(timesheet,profile):
     if timesheet.status=="approved": return False
     if timesheet.employee_id==profile.id: return timesheet.status in ["draft","rejected"]
     if profile.role=="admin": return timesheet.status in ["draft","rejected","submitted"]
-    return profile.role=="manager" and timesheet.status in ["draft","rejected","submitted"] and (timesheet.employee.manager_id==profile.id or timesheet.requested_approver_id==profile.id)
+    return profile.role=="manager" and timesheet.status=="submitted" and _manager_can_view_timesheet(timesheet,profile)
+
+
+def _can_delete_timesheet(timesheet,profile):
+    if timesheet.status!="draft": return False
+    if timesheet.employee_id==profile.id or profile.role=="admin": return True
+    return False
 
 
 @login_required
@@ -482,7 +580,8 @@ def timesheet_review(request,pk):
         if form.cleaned_data.get("consultant_name"): obj.consultant_name=form.cleaned_data["consultant_name"]
         if form.cleaned_data.get("consultant_signature"): obj.consultant_signature=form.cleaned_data["consultant_signature"]
         obj.save()
-        if obj.request_task_id: Task.objects.filter(pk=obj.request_task_id).update(status="completed" if obj.status=="approved" else "rejected",updated_at=timezone.now())
+        if obj.request_task_id:
+            review_task=obj.request_task; review_task.status="completed" if obj.status=="approved" else "rejected"; review_task.save(update_fields=["status","updated_at"])
         Notification.objects.create(user=obj.employee.user,title=f"Timesheet {obj.status}",message=obj.review_notes,url=f"/timesheets/{obj.pk}/"); _audit(request,f"timesheet_{obj.status}",obj); messages.success(request,f"Timesheet {obj.status}."); return redirect("timesheet_detail",pk=pk)
     return render(request,"erp/timesheet_review_form.html",{"form":form,"timesheet":obj,"title":"Review monthly timesheet"})
 
@@ -491,7 +590,7 @@ def timesheet_review(request,pk):
 def timesheet_signature(request,pk,kind):
     p=_profile(request); obj=get_object_or_404(Timesheet,pk=pk,organization=p.organization)
     if p.role=="employee" and obj.employee_id!=p.id: return HttpResponse(status=404)
-    if p.role=="manager" and obj.employee_id!=p.id and not _can_review_timesheet(obj,p): return HttpResponse(status=404)
+    if p.role=="manager" and not _manager_can_view_timesheet(obj,p): return HttpResponse(status=404)
     fields={"expert":obj.expert_signature,"manager":obj.manager_signature,"consultant":obj.consultant_signature}; signature=fields.get(kind)
     if not signature: return HttpResponse(status=404)
     return FileResponse(signature.open("rb"),content_type=mimetypes.guess_type(signature.name)[0] or "image/png")
@@ -500,21 +599,31 @@ def timesheet_signature(request,pk,kind):
 @login_required
 @roles_allowed("admin","manager")
 def timesheet_request(request):
-    p=_profile(request); form=TimesheetRequestForm(request.POST or None,organization=p.organization,manager=p)
+    p=_profile(request)
+    eligible_ids=_reporting_descendant_ids(p) if p.role=="manager" else None
+    form=TimesheetRequestForm(request.POST or None,organization=p.organization,manager=p,eligible_employee_ids=eligible_ids,selected_employee=request.GET.get("employee"))
     if request.method=="POST" and form.is_valid():
-        employee=form.cleaned_data["employee"]; month=int(form.cleaned_data["month"]); year=form.cleaned_data["year"]
-        period_start=date(year,month,1); period_end=date(year,month,calendar.monthrange(year,month)[1])
-        sheet,created=Timesheet.objects.get_or_create(organization=p.organization,employee=employee,period_start=period_start,defaults={"period_end":period_end,"country":p.organization.address.split(",")[-1].strip() if p.organization.address else "","place_of_assignment":str(employee.department or ""),"requested_approver":p})
-        if sheet.status=="approved": messages.error(request,"That monthly timesheet is already approved."); return redirect("timesheets")
-        if sheet.request_task_id and sheet.request_task.status not in ["completed","rejected"]: messages.info(request,"An active request already exists for that timesheet."); return redirect("timesheet_detail",pk=sheet.pk)
-        if created:
-            assigned=Task.objects.filter(organization=p.organization,assigned_to=employee,start_date__lte=period_end,due_date__gte=period_start).exclude(status="pending")
-            TimesheetEntry.objects.bulk_create([TimesheetEntry(timesheet=sheet,date=max(task.start_date,period_start),task=task,task_performed=task.title,hours=8,days_worked=1,location=sheet.country,description=task.description) for task in assigned])
-        request_task=Task(organization=p.organization,title=f"Complete {calendar.month_name[month]} {year} timesheet",description=f"Complete and submit the monthly timesheet requested by {p}.",instructions=form.cleaned_data["instructions"],assigned_to=employee,department=employee.department,created_by=request.user,priority="medium",status="assigned",start_date=timezone.localdate(),due_date=form.cleaned_data["due_date"])
-        request_task.full_clean(); request_task.save(); sheet.request_task=request_task; sheet.requested_approver=p; sheet.save(update_fields=["request_task","requested_approver","updated_at"])
-        Notification.objects.create(user=employee.user,title="Timesheet requested",message=request_task.title,url=f"/timesheets/{sheet.pk}/")
-        send_task_assignment_email(request_task); _audit(request,"timesheet_requested",sheet); messages.success(request,f"Timesheet requested from {employee}; a medium-priority task was assigned."); return redirect("timesheets")
-    return render(request,"erp/form.html",{"form":form,"title":"Request employee timesheet","submit":"Send request"})
+        employees=list(form.cleaned_data["employee"]); months=sorted(int(value) for value in form.cleaned_data["month"]); year=form.cleaned_data["year"]
+        requested=[]; skipped=[]
+        with transaction.atomic():
+            for employee in employees:
+                for month in months:
+                    period_start=date(year,month,1); period_end=date(year,month,calendar.monthrange(year,month)[1])
+                    sheet,created=Timesheet.objects.get_or_create(organization=p.organization,employee=employee,period_start=period_start,defaults={"period_end":period_end,"country":p.organization.address.split(",")[-1].strip() if p.organization.address else "","place_of_assignment":"Kenya","requested_approver":p})
+                    if sheet.status=="approved" or (sheet.request_task_id and sheet.request_task.status not in ["completed","rejected"]):
+                        skipped.append(f"{employee} · {calendar.month_name[month]}"); continue
+                    if created:
+                        assigned=Task.objects.filter(organization=p.organization,assigned_to=employee,actual_started_at__date__lte=period_end).filter(Q(actual_completed_at__isnull=True)|Q(actual_completed_at__date__gte=period_start))
+                        TimesheetEntry.objects.bulk_create(_prefilled_timesheet_entries(sheet,assigned))
+                    request_task=Task(organization=p.organization,title=f"Complete {calendar.month_name[month]} {year} timesheet",description=f"Complete and submit the monthly timesheet requested by {p}.",instructions=form.cleaned_data["instructions"],assigned_to=employee,department=employee.department,created_by=request.user,priority="medium",status="assigned",start_date=timezone.localdate(),due_date=form.cleaned_data["due_date"])
+                    request_task.full_clean(); request_task.save(); sheet.request_task=request_task; sheet.requested_approver=p; sheet.save(update_fields=["request_task","requested_approver","updated_at"])
+                    Notification.objects.create(user=employee.user,title="Timesheet requested",message=request_task.title,url=f"/timesheets/{sheet.pk}/")
+                    _audit(request,"timesheet_requested",sheet); requested.append(request_task)
+        for request_task in requested: send_task_assignment_email(request_task)
+        if requested: messages.success(request,f"Sent {len(requested)} timesheet request{'s' if len(requested)!=1 else ''} to {len(employees)} employee{'s' if len(employees)!=1 else ''}.")
+        if skipped: messages.info(request,f"Skipped {len(skipped)} approved or already-requested timesheet{'s' if len(skipped)!=1 else ''}.")
+        return redirect("timesheets")
+    return render(request,"erp/timesheet_request_form.html",{"form":form,"title":"Request employee timesheets"})
 
 
 @login_required
@@ -523,7 +632,7 @@ def timesheet_export(request,pk,fmt):
     obj=get_object_or_404(Timesheet.objects.prefetch_related("entries"),pk=pk,organization=p.organization)
     if p.role=="employee" and obj.employee_id!=p.id: 
         return redirect("timesheets")
-    if p.role=="manager" and obj.employee_id!=p.id and not _can_review_timesheet(obj,p):
+    if p.role=="manager" and not _manager_can_view_timesheet(obj,p):
         return redirect("timesheets")
     if fmt!="pdf": return HttpResponse(status=404)
     
@@ -555,11 +664,13 @@ def timesheet_export_year(request,pk):
 
     p=_profile(request); anchor=get_object_or_404(Timesheet.objects.select_related("employee__user","employee__department"),pk=pk,organization=p.organization)
     if p.role=="employee" and anchor.employee_id!=p.id: return HttpResponse(status=404)
-    if p.role=="manager" and not (anchor.employee.manager_id==p.id or anchor.employee_id==p.id or (p.department_id and anchor.employee.department_id==p.department_id)): return HttpResponse(status=404)
+    if p.role=="manager" and not _manager_can_view_timesheet(anchor,p): return HttpResponse(status=404)
     year=anchor.period_start.year; form=TimesheetExportForm(request.POST or None,year=year)
     if request.method!="POST" or not form.is_valid(): return render(request,"erp/timesheet_export_form.html",{"form":form,"timesheet":anchor,"year":year,"title":"Choose months to export"})
     selected_months=sorted({int(month) for month in form.cleaned_data["months"]})
-    sheets=list(Timesheet.objects.filter(organization=p.organization,employee=anchor.employee,period_start__year=year).prefetch_related("entries").order_by("period_start")); by_month={sheet.period_start.month:sheet for sheet in sheets}; metadata=sheets[0] if sheets else anchor
+    sheet_query=Timesheet.objects.filter(organization=p.organization,employee=anchor.employee,period_start__year=year)
+    if p.role=="manager" and anchor.employee_id!=p.id: sheet_query=sheet_query.exclude(status="draft")
+    sheets=list(sheet_query.prefetch_related("entries").order_by("period_start")); by_month={sheet.period_start.month:sheet for sheet in sheets}; metadata=sheets[0] if sheets else anchor
     wb=Workbook(); thin=Side(style="thin",color="404040"); border=Border(left=thin,right=thin,top=thin,bottom=thin); label_fill="E5E7EB"; header_fill="4B5563"; weekend_fill="F3F4F6"; signature_buffers=[]
     month_names=[]
     for export_index,month in enumerate(selected_months):
@@ -685,9 +796,23 @@ def leave_request_review(request,pk):
     leave=get_object_or_404(requests,pk=pk)
     if leave.status!="pending":
         messages.info(request,"This leave request has already been reviewed."); return redirect("leave_dashboard")
-    form=LeaveReviewForm(request.POST or None)
+    next_approver=p.manager if p.role=="manager" else None
+    can_escalate=bool(next_approver and next_approver.id!=p.id and next_approver.organization_id==p.organization_id and next_approver.role in ["manager","admin"] and next_approver.user.is_active)
+    form=LeaveReviewForm(request.POST or None,can_escalate=can_escalate)
     if request.method=="POST" and form.is_valid():
         decision=form.cleaned_data["decision"]
+        if decision=="escalate":
+            if not can_escalate:
+                messages.error(request,"You do not have an active manager available for escalation."); return redirect("leave_dashboard")
+            leave.requested_approver=next_approver
+            leave.review_message=form.cleaned_data["message"]
+            leave.save(update_fields=["requested_approver","review_message","updated_at"])
+            Notification.objects.create(user=next_approver.user,title="Leave request escalated to you",message=f"{leave.employee} requested {leave.days} working days of {leave.get_leave_type_display().lower()}.",url="/leave/")
+            Notification.objects.create(user=leave.employee.user,title="Leave request moved upward",message=f"{p} moved your request to {next_approver} for review.",url="/leave/")
+            _audit(request,"leave_escalated",leave)
+            send_leave_email(leave,"submitted")
+            messages.success(request,f"Leave request moved to {next_approver} for review.")
+            return redirect("leave_dashboard")
         if decision=="approved":
             allocation=LeaveAllocation.objects.filter(organization=p.organization,employee=leave.employee,leave_type=leave.leave_type,year=leave.start_date.year).first()
             used=LeaveRequest.objects.filter(organization=p.organization,employee=leave.employee,leave_type=leave.leave_type,start_date__year=leave.start_date.year,status="approved").exclude(pk=leave.pk).aggregate(total=Sum("days"))["total"] or 0
@@ -817,7 +942,8 @@ def payment_voucher_action(request,pk,action):
             if action=="reject": voucher.approved_by=None; voucher.approved_at=None; fields += ["approved_by","approved_at"]
             if action=="paid": voucher.payment_received_by=form.cleaned_data["payment_received_by"]; voucher.paid_at=timezone.now(); fields += ["payment_received_by","paid_at"]
             voucher.save(update_fields=fields); _audit(request,f"payment_voucher_{target}",voucher)
-            if reviewer_action and voucher.approval_task_id: Task.objects.filter(pk=voucher.approval_task_id).update(status="completed",updated_at=timezone.now())
+            if reviewer_action and voucher.approval_task_id:
+                review_task=voucher.approval_task; review_task.status="completed"; review_task.save(update_fields=["status","updated_at"])
             if voucher.prepared_by_id!=request.user.id: Notification.objects.create(user=voucher.prepared_by,title=f"Voucher {target}",message=f"{voucher.number} for {voucher.payee} is now {target}.",url=f"/payment-vouchers/{voucher.pk}/")
             messages.success(request,f"Voucher {voucher.number} marked {target}.")
         return redirect("payment_voucher_detail",pk=pk)
@@ -920,7 +1046,8 @@ def item_request_action(request,pk,action):
             Notification.objects.create(user=next_approver.user,title="Item request escalated to you",message=obj.number,url=f"/item-requests/{obj.pk}/"); send_task_assignment_email(task); _audit(request,"item_request_escalated",obj); messages.success(request,f"Item request moved to {next_approver}.")
         else:
             obj.status="approved" if action=="approve" else "rejected"; obj.review_notes=notes; obj.approved_by=request.user if action=="approve" else None; obj.approved_at=timezone.now() if action=="approve" else None; obj.save(update_fields=["status","review_notes","approved_by","approved_at","updated_at"])
-            if obj.approval_task_id: Task.objects.filter(pk=obj.approval_task_id).update(status="completed" if action=="approve" else "rejected",updated_at=timezone.now())
+            if obj.approval_task_id:
+                approval_task=obj.approval_task; approval_task.status="completed"; approval_task.save(update_fields=["status","updated_at"])
             Notification.objects.create(user=obj.requested_by,title=f"Item request {obj.status}",message=notes or obj.number,url=f"/item-requests/{obj.pk}/"); _audit(request,f"item_request_{obj.status}",obj); messages.success(request,f"Item request {obj.status}.")
         return redirect("item_request_detail",pk=pk)
     labels={"approve":"Approve item request","reject":"Reject item request","escalate":"Move item request to my manager"}
@@ -992,10 +1119,11 @@ def employees(request):
     p=_profile(request)
     qs=Profile.objects.filter(organization=p.organization).select_related("user","department","manager__user")
     if p.role=="manager":
-        scope=Q(pk=p.pk)|Q(manager=p)
-        if p.department_id: scope|=Q(department=p.department)
-        qs=qs.filter(scope).distinct()
+        descendant_ids=_reporting_descendant_ids(p)
+        qs=qs.filter(Q(pk=p.pk)|Q(pk__in=descendant_ids)).distinct()
     employees_list=list(qs.order_by("department__name","user__first_name","user__last_name")); visible_ids={employee.id for employee in employees_list}
+    eligible_timesheet_ids=set(_reporting_descendant_ids(p)) if p.role=="manager" else {employee.id for employee in employees_list if employee.id!=p.id}
+    for employee in employees_list: employee.can_request_timesheet=employee.id in eligible_timesheet_ids
     hierarchy_groups=[]
     departments=list(Department.objects.filter(organization=p.organization).order_by("name"))
     for department in departments+[None]:

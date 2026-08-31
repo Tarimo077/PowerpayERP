@@ -32,6 +32,8 @@
           <div>
             <small class="opacity-60">Due date</small><p class="font-semibold">{{ task.due_date }}</p>
           </div>
+          <div><small class="opacity-60">Actual work started</small><p class="font-semibold">{{ task.actual_started_at|date:'d M Y, H:i'|default:'Not started' }}</p></div>
+          <div><small class="opacity-60">Actual work completed</small><p class="font-semibold">{{ task.actual_completed_at|date:'d M Y, H:i'|default:'Not completed' }}</p></div>
           <div>
             <small class="opacity-60">Department</small><p>{{ task.department|default:'General' }}</p>
           </div>

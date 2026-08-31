@@ -129,7 +129,7 @@ class TaskForm(StyledForm, forms.ModelForm):
         self.fields["department"].queryset=Department.objects.filter(organization=organization)
 
 class TaskStatusForm(StyledForm, forms.Form):
-    status=forms.ChoiceField(label="New status")
+    status=forms.ChoiceField(label="Change status to",help_text="Choose the next stage for this task.")
     note=forms.CharField(required=False,label="Status note",widget=forms.Textarea(attrs={"rows":3,"placeholder":"Optional note for the assignee"}))
 
     def __init__(self,*args,choices=None,**kwargs):
@@ -148,7 +148,15 @@ class TimesheetForm(StyledForm, forms.ModelForm):
         super().__init__(*args,**kwargs); self.organization=organization; self.employee=employee
         today=timezone.localdate(); self.fields["month"].initial=today.month
         self.fields["country"].initial=(organization.address.split(",")[-1].strip() if organization and organization.address else "")
-        self.fields["place_of_assignment"].initial=str(employee.department) if employee and employee.department else ""
+        self.fields["place_of_assignment"].initial="Kenya"
+        self.fields["place_of_assignment"].help_text="Defaults to Kenya; change it when the assignment is elsewhere."
+        if self.instance.pk:
+            self.fields["month"].initial=self.instance.period_start.month
+            self.fields["year"].initial=self.instance.period_start.year
+            self.fields["month"].disabled=True
+            self.fields["year"].disabled=True
+            self.fields["month"].help_text="The reporting month cannot be changed after the timesheet is generated."
+            self.fields["year"].help_text="The reporting year cannot be changed after the timesheet is generated."
         self.order_fields(["month","year","service_contract","financing","contract_number","country","place_of_assignment","initial_budget_days","expert_signature"])
         self.fields["expert_signature"].help_text="Optional now; a PNG, JPG or WebP signature is required before submission. Maximum 2 MB."
 
@@ -204,18 +212,19 @@ class TimesheetReviewForm(StyledForm,forms.Form):
     def clean_consultant_signature(self): return _clean_signature(self.cleaned_data.get("consultant_signature"))
 
 class TimesheetRequestForm(StyledForm,forms.Form):
-    employee=forms.ModelChoiceField(queryset=Profile.objects.none(),empty_label="Choose an employee")
-    month=forms.ChoiceField(choices=[(number,calendar.month_name[number]) for number in range(1,13)])
+    employee=forms.ModelMultipleChoiceField(label="Employees",queryset=Profile.objects.none(),widget=forms.CheckboxSelectMultiple,help_text="Select one or more employees below you in the reporting hierarchy.")
+    month=forms.MultipleChoiceField(label="Months",choices=[(str(number),calendar.month_name[number]) for number in range(1,13)],widget=forms.CheckboxSelectMultiple,help_text="A separate monthly timesheet and task will be prepared for every selected month.")
     year=forms.IntegerField(min_value=2000,max_value=2100,initial=lambda:timezone.localdate().year)
     due_date=forms.DateField(widget=forms.DateInput(attrs={"type":"date"}))
     instructions=forms.CharField(required=False,widget=forms.Textarea(attrs={"rows":3,"placeholder":"Optional guidance for completing the timesheet"}))
 
-    def __init__(self,*args,organization=None,manager=None,**kwargs):
+    def __init__(self,*args,organization=None,manager=None,eligible_employee_ids=None,selected_employee=None,**kwargs):
         super().__init__(*args,**kwargs)
         employees=Profile.objects.filter(organization=organization,user__is_active=True).exclude(pk=getattr(manager,"pk",None))
-        if manager and manager.role=="manager": employees=employees.filter(manager=manager)
+        if manager and manager.role=="manager": employees=employees.filter(pk__in=eligible_employee_ids or [])
         self.fields["employee"].queryset=employees.select_related("user","department").order_by("user__first_name","user__last_name")
-        self.fields["month"].initial=timezone.localdate().month
+        if selected_employee and employees.filter(pk=selected_employee).exists(): self.fields["employee"].initial=[selected_employee]
+        self.fields["month"].initial=[str(timezone.localdate().month)]
         self.fields["due_date"].initial=timezone.localdate()+timedelta(days=3)
 
     def clean_due_date(self):
@@ -283,8 +292,12 @@ class LeaveRequestForm(StyledForm, forms.ModelForm):
         return data
 
 class LeaveReviewForm(StyledForm, forms.Form):
-    decision=forms.ChoiceField(choices=[("approved","Approve"),("rejected","Reject")])
+    decision=forms.ChoiceField(choices=[("approved","Approve"),("rejected","Reject"),("escalate","Move to my manager")])
     message=forms.CharField(required=False,label="Message to employee",widget=forms.Textarea(attrs={"rows":4,"placeholder":"Optional message explaining your decision"}))
+
+    def __init__(self,*args,can_escalate=False,**kwargs):
+        super().__init__(*args,**kwargs)
+        if not can_escalate: self.fields["decision"].choices=[choice for choice in self.fields["decision"].choices if choice[0]!="escalate"]
 
 class MultiplePDFInput(forms.ClearableFileInput):
     allow_multiple_selected=True
