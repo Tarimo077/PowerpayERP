@@ -1,12 +1,42 @@
 {% extends 'base.html' %}
 {% block page_title %}Employees{% endblock %}
 {% block content %}
-<div class="flex flex-wrap items-center justify-between gap-4 mb-6"><div><h2 class="text-2xl font-bold">Employees</h2><p class="opacity-60 mt-1">Organization directory and reporting hierarchy.</p></div>{% if current_profile.role == 'admin' %}<a href="{% url 'employee_create' %}" class="btn btn-primary text-white" data-modal data-modal-title="Add employee"><i class="fa-solid fa-user-plus"></i> Add employee</a>{% endif %}</div>
-<div class="tabs tabs-boxed w-fit mb-5"><button class="tab tab-active" data-employee-tab="directory">Directory</button><button class="tab" data-employee-tab="hierarchy">Hierarchy tree</button></div>
-<section data-employee-panel="directory" class="overflow-x-auto bg-base-100 shadow-sm rounded-xl border border-base-300"><table class="table"><thead><tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Position</th><th>Manager</th><th>Role</th><th>Status</th><th class="text-right">Actions</th></tr></thead><tbody>
-{% for p in employees %}<tr class="hover"><td><div class="flex items-center gap-3"><div class="avatar placeholder"><div class="bg-emerald-100 text-emerald-700 rounded-full w-9"><span>{{ p.user.first_name|first }}{{ p.user.last_name|first }}</span></div></div><div><div class="font-semibold">{{ p }}</div><div class="text-xs opacity-60">{{ p.user.email }}</div></div></div></td><td class="font-mono text-sm">{{ p.employee_id|default:'—' }}</td><td>{{ p.department|default:'—' }}</td><td>{{ p.position|default:'—' }}</td><td>{{ p.manager|default:'—' }}</td><td><span class="badge badge-ghost">{{ p.get_role_display }}</span></td><td><span class="badge badge-success text-white">Active</span></td><td class="text-right">{% if p.can_request_timesheet %}<a href="{% url 'timesheet_request' %}?employee={{ p.pk }}" data-modal data-modal-title="Request timesheet from {{ p }}" class="btn btn-sm btn-primary text-white whitespace-nowrap"><i class="fa-solid fa-clock"></i> Request timesheet</a>{% else %}—{% endif %}</td></tr>{% endfor %}
-{% for invite in pending_invites %}<tr class="hover bg-orange-50/40"><td><div class="font-semibold">{{ invite.email }}</div><div class="text-xs text-orange-600">Awaiting account activation</div></td><td class="font-mono text-sm">{{ invite.employee_id }}</td><td>{{ invite.department|default:'—' }}</td><td>{{ invite.position|default:'—' }}</td><td>{{ invite.manager|default:'—' }}</td><td><span class="badge badge-ghost">{{ invite.get_role_display }}</span></td><td><span class="badge badge-warning text-white">Invited</span></td></tr>{% endfor %}
-{% if not employees and not pending_invites %}<tr><td colspan="8" class="text-center py-14 text-base-content/50">No employees have been added.</td></tr>{% endif %}</tbody></table></section>
-<section data-employee-panel="hierarchy" class="hidden grid lg:grid-cols-2 gap-5">{% for group in hierarchy_groups %}<article class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden shadow-sm"><header class="px-5 py-4 bg-gradient-to-r from-emerald-700 to-emerald-600 text-white"><h3 class="font-bold"><i class="fa-solid fa-building mr-2"></i>{{ group.department|default:'No department assigned' }}</h3></header><div class="p-4 space-y-2">{% for node in group.nodes %}<div class="relative flex items-center gap-3 rounded-xl border border-base-300 bg-base-100 p-3" style="margin-left: {% widthratio node.depth 1 24 %}px"><span class="w-9 h-9 shrink-0 rounded-full {% if node.employee.role == 'manager' or node.employee.role == 'admin' %}bg-orange-500 text-white{% else %}bg-emerald-100 text-emerald-700{% endif %} grid place-items-center"><i class="fa-solid {% if node.employee.role == 'manager' or node.employee.role == 'admin' %}fa-user-tie{% else %}fa-user{% endif %}"></i></span><div class="min-w-0 flex-1"><div class="font-semibold truncate">{{ node.employee }}</div><div class="text-xs opacity-55 truncate">{{ node.employee.position|default:node.employee.get_role_display }} · {{ node.employee.employee_id|default:'No ID' }}</div></div>{% if node.depth %}<span class="badge badge-ghost badge-sm">Reports up</span>{% else %}<span class="badge badge-sm bg-orange-500 text-white border-0">Team lead</span>{% endif %}</div>{% endfor %}</div></article>{% empty %}<div class="lg:col-span-2 text-center py-14 opacity-50">No hierarchy is available.</div>{% endfor %}</section>
-<script>document.querySelectorAll('[data-employee-tab]').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('[data-employee-tab]').forEach(item=>item.classList.toggle('tab-active',item===tab));document.querySelectorAll('[data-employee-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.employeePanel!==tab.dataset.employeeTab))}))</script>
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6"><div><h2 class="text-2xl font-bold">Employees</h2><p class="opacity-60 mt-1">Organization directory and reporting hierarchy.</p></div>{% if current_profile.role == 'admin' %}<a href="{% url 'employee_create' %}"
+   class="btn btn-primary text-white"
+   data-modal
+   data-modal-title="Add employee"><i class="fa-solid fa-user-plus"></i> Add employee</a>{% endif %}</div>
+  <div class="tabs tabs-boxed w-fit mb-5">
+    <button class="tab tab-active" data-employee-tab="directory">Directory</button><button class="tab" data-employee-tab="hierarchy">Hierarchy tree</button>
+  </div>
+  <section data-employee-panel="directory"
+           class="overflow-x-auto bg-base-100 shadow-sm rounded-xl border border-base-300">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Employee ID</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Manager</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in employees %}<tr class="hover"><td><div class="flex items-center gap-3"><div class="avatar placeholder"><div class="bg-emerald-100 text-emerald-700 rounded-full w-9"><span>{{ p.user.first_name|first }}{{ p.user.last_name|first }}</span></div></div><div><div class="font-semibold">{{ p }}</div><div class="text-xs opacity-60">{{ p.user.email }}</div></div></div></td><td class="font-mono text-sm">{{ p.employee_id|default:'—' }}</td><td>{{ p.department|default:'—' }}</td><td>{{ p.position|default:'—' }}</td><td>{{ p.manager|default:'—' }}</td><td><span class="badge badge-ghost">{{ p.get_role_display }}</span></td><td><span class="badge badge-success text-white">Active</span></td><td class="text-right">{% if p.can_request_timesheet %}<a href="{% url 'timesheet_request' %}?employee={{ p.pk }}"
+   data-modal
+   data-modal-title="Request timesheet from {{ p }}"
+   class="btn btn-sm btn-primary text-white whitespace-nowrap"><i class="fa-solid fa-clock"></i> Request timesheet</a>{% else %}—{% endif %}</td></tr>{% endfor %}
+        {% for invite in pending_invites %}<tr class="hover bg-orange-50/40"><td><div class="font-semibold">{{ invite.email }}</div><div class="text-xs text-orange-600">Awaiting account activation</div></td><td class="font-mono text-sm">{{ invite.employee_id }}</td><td>{{ invite.department|default:'—' }}</td><td>{{ invite.position|default:'—' }}</td><td>{{ invite.manager|default:'—' }}</td><td><span class="badge badge-ghost">{{ invite.get_role_display }}</span></td><td><span class="badge badge-warning text-white">Invited</span></td></tr>{% endfor %}
+      {% if not employees and not pending_invites %}<tr><td colspan="8" class="text-center py-14 text-base-content/50">No employees have been added.</td></tr>{% endif %}</tbody></table></section>
+      <section data-employee-panel="hierarchy"
+               class="hidden grid lg:grid-cols-2 gap-5">{% for group in hierarchy_groups %}<article class="rounded-2xl border border-base-300 bg-base-100 overflow-hidden shadow-sm"><header class="px-5 py-4 bg-gradient-to-r from-emerald-700 to-emerald-600 text-white"><h3 class="font-bold"><i class="fa-solid fa-building mr-2"></i>{{ group.department|default:'No department assigned' }}</h3></header><div class="p-4 space-y-2">{% for node in group.nodes %}<div class="relative flex items-center gap-3 rounded-xl border border-base-300 bg-base-100 p-3"
+     style="margin-left: {% widthratio node.depth 1 24 %}px"><span class="w-9 h-9 shrink-0 rounded-full {% if node.employee.role == 'manager' or node.employee.role == 'admin' %}bg-orange-500 text-white{% else %}bg-emerald-100 text-emerald-700{% endif %} grid place-items-center"><i class="fa-solid {% if node.employee.role == 'manager' or node.employee.role == 'admin' %}fa-user-tie{% else %}fa-user{% endif %}"></i></span><div class="min-w-0 flex-1"><div class="font-semibold truncate">{{ node.employee }}</div><div class="text-xs opacity-55 truncate">{{ node.employee.position|default:node.employee.get_role_display }} · {{ node.employee.employee_id|default:'No ID' }}</div></div>{% if node.depth %}<span class="badge badge-ghost badge-sm">Reports up</span>{% else %}<span class="badge badge-sm bg-orange-500 text-white border-0">Team lead</span>{% endif %}</div>{% endfor %}</div></article>{% empty %}<div class="lg:col-span-2 text-center py-14 opacity-50">No hierarchy is available.</div>{% endfor %}</section>
+      <script>
+          document.querySelectorAll('[data-employee-tab]').forEach(tab => tab.addEventListener('click', () => {
+              document.querySelectorAll('[data-employee-tab]').forEach(item => item.classList.toggle('tab-active', item === tab));
+              document.querySelectorAll('[data-employee-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.employeePanel !== tab.dataset.employeeTab))
+          }))
+      </script>
 {% endblock %}

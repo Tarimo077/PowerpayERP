@@ -3,380 +3,944 @@
 <html lang="en" data-theme="powerpay">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" /><title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>
       {% block title %}
         PowerpayERP
       {% endblock %}
-    </title><link rel="icon" href="{% static 'images/pp_no_bgcropped.png' %}" />
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" />
+    </title>
+    <link rel="icon" href="{% static 'images/pp_no_bgcropped.png' %}" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css"
+          rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+          rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = { daisyui: { themes: [{ powerpay: { primary: '#059669', 'primary-content': '#fff', secondary: '#f97316', 'secondary-content': '#fff', accent: '#fb923c', neutral: '#1f2937', 'base-100': '#fff', 'base-200': '#f6f7f9', 'base-300': '#e5e7eb', 'base-content': '#18221d', info: '#0ea5e9', success: '#059669', warning: '#f59e0b', error: '#dc2626' } }] } }
+        tailwind.config = {
+            daisyui: {
+                themes: [{
+                    powerpay: {
+                        primary: '#059669',
+                        'primary-content': '#fff',
+                        secondary: '#f97316',
+                        'secondary-content': '#fff',
+                        accent: '#fb923c',
+                        neutral: '#1f2937',
+                        'base-100': '#fff',
+                        'base-200': '#f6f7f9',
+                        'base-300': '#e5e7eb',
+                        'base-content': '#18221d',
+                        info: '#0ea5e9',
+                        success: '#059669',
+                        warning: '#f59e0b',
+                        error: '#dc2626'
+                    }
+                }]
+            }
+        }
     </script>
     <style>
-      :root {
-        --green: #059669;
-        --orange: #f97316;
-        --side: 272px;
-      }
-      body {
-        font-family: Inter, system-ui, sans-serif;
-      }
-      .pp-side {
-        width: var(--side);
-      }
-      .pp-main {
-        margin-left: var(--side);
-      }
-      .side-link {
-        transition: 0.2s;
-      }
-      .side-link:hover {
-        transform: translateX(3px);
-      }
-      .side-link.active {
-        background: #ecfdf5;
-        color: #047857;
-        box-shadow: 0 1px 3px #0596691f;
-      }
-      .side-link.active .nav-icon {
-        background: #d1fae5;
-        color: #059669;
-      }
-      .nav-icon {
-        background: #f3f4f6;
-      }
-      .card,
-      .stat {
-        border: 1px solid #edf0ee;
-        box-shadow: 0 1px 2px #11182708;
-      }
-      .stat {
-        transition: 0.2s;
-      }
-      .stat:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 30px -14px #05966940;
-      }
-      .stat:nth-child(2) .stat-value,
-      .stat:nth-child(4) .stat-value {
-        color: var(--orange) !important;
-      }
-      .btn-primary,
-      .btn-success {
-        background: var(--green);
-        border-color: var(--green);
-        color: #fff !important;
-      }
-      .btn-primary:hover {
-        background: #047857;
-        border-color: #047857;
-      }
-      .text-primary,
-      .link-primary {
-        color: var(--green) !important;
-      }
-      .badge-primary {
-        background: var(--green);
-        border-color: var(--green);
-      }
-      .table thead {
-        background: var(--green);
-        color: #fff;
-        text-transform: uppercase;
-        font-size: 0.69rem;
-        letter-spacing: 0.055em;
-      }
-      .table thead th { color:#fff; 
-        padding-top:.85rem; 
-        padding-bottom:.85rem; 
-      }
-      .table thead th:first-child { border-radius:.7rem 0 0 0; 
-      }
-      .table thead th:last-child { border-radius:0 .7rem 0 0; 
-      }
-      .table tbody tr { border-color:#edf0ee; 
-      }
-      .table tbody tr:hover { background:#f0fdf4; 
-      }
-      .input,.select,.textarea,input[type="file"],input:not([type]),input[type="text"],input[type="email"],input[type="password"],input[type="number"],input[type="date"],input[type="tel"],input[type="url"] { border:1px solid #9ca3af !important; 
-        background:#fff; 
-      }
-      input:not([type]),input[type="text"],input[type="email"],input[type="password"],input[type="number"],input[type="date"],input[type="tel"],input[type="url"] { width:100%; 
-        min-height:3rem; 
-        padding:.65rem 1rem; 
-        border-radius:.5rem; 
-      }
-      .input:hover,.select:hover,.textarea:hover,input:not([type]):hover,input[type="text"]:hover,input[type="email"]:hover,input[type="password"]:hover,input[type="number"]:hover,input[type="date"]:hover,input[type="tel"]:hover,input[type="url"]:hover { border-color:#6b7280 !important; 
-      }
-      .input:focus,.select:focus,.textarea:focus,input:not([type]):focus,input[type="text"]:focus,input[type="email"]:focus,input[type="password"]:focus,input[type="number"]:focus,input[type="date"]:focus,input[type="tel"]:focus,input[type="url"]:focus { border-color:var(--green) !important; 
-        outline:2px solid #a7f3d0 !important; 
-        outline-offset:1px; 
-      }
-      .card-actions,.modal-action,[data-button-row] { gap:.75rem; 
-      }
-      .password-field-wrap { position:relative; 
-        width:100%; 
-      }
-      .password-field-wrap input { padding-right:3rem !important; 
-      }
-      .password-toggle { position:absolute; 
-        right:.4rem; 
-        top:50%; 
-        transform:translateY(-50%); 
-        width:2.25rem; 
-        height:2.25rem; 
-        border-radius:.5rem; 
-        display:grid; 
-        place-items:center; 
-        color:#6b7280; 
-        background:transparent; 
-        border:0; 
-        cursor:pointer; 
-      }
-      .password-toggle:hover { color:#047857; 
-        background:#ecfdf5; 
-      }
-      .password-toggle:focus-visible { outline:2px solid #059669; 
-        outline-offset:1px; 
-      }
-      .helptext { display:block; 
-        margin-top:.5rem; 
-        color:#6b7280; 
-        font-size:.78rem; 
-        line-height:1.5; 
-      }
-      .helptext ul { list-style:disc; 
-        padding-left:1.25rem; 
-        margin-top:.35rem; 
-        display:grid; 
-        gap:.2rem; 
-      }
-      .errorlist {
-        color: #dc2626;
-        font-size: 0.8rem;
-      }
-      .label-text {
-        font-weight: 600;
-      }
-      @media (max-width: 1023px) {
+        :root {
+            --green: #059669;
+            --orange: #f97316;
+            --side: 272px;
+        }
+
+        body {
+            font-family: Inter, system-ui, sans-serif;
+        }
+
         .pp-side {
-          transform: translateX(-100%);
-          transition: 0.25s;
+            width: var(--side);
         }
-        .pp-side.open {
-          transform: none;
-        }
+
         .pp-main {
-          margin-left: 0;
+            margin-left: var(--side);
         }
-      }
+
+        .side-link {
+            transition: 0.2s;
+        }
+
+        .side-link:hover {
+            transform: translateX(3px);
+        }
+
+        .side-link.active {
+            background: #ecfdf5;
+            color: #047857;
+            box-shadow: 0 1px 3px #0596691f;
+        }
+
+        .side-link.active .nav-icon {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .nav-icon {
+            background: #f3f4f6;
+        }
+
+        .card,
+        .stat {
+            border: 1px solid #edf0ee;
+            box-shadow: 0 1px 2px #11182708;
+        }
+
+        .stat {
+            transition: 0.2s;
+        }
+
+        .stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -14px #05966940;
+        }
+
+        .stat:nth-child(2) .stat-value,
+        .stat:nth-child(4) .stat-value {
+            color: var(--orange) !important;
+        }
+
+        .btn-primary,
+        .btn-success {
+            background: var(--green);
+            border-color: var(--green);
+            color: #fff !important;
+        }
+
+        .btn-primary:hover {
+            background: #047857;
+            border-color: #047857;
+        }
+
+        .text-primary,
+        .link-primary {
+            color: var(--green) !important;
+        }
+
+        .badge-primary {
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        .table thead {
+            background: var(--green);
+            color: #fff;
+            text-transform: uppercase;
+            font-size: 0.69rem;
+            letter-spacing: 0.055em;
+        }
+
+        .table thead th {
+            color: #fff;
+            padding-top: .85rem;
+            padding-bottom: .85rem;
+        }
+
+        .table thead th:first-child {
+            border-radius: .7rem 0 0 0;
+        }
+
+        .table thead th:last-child {
+            border-radius: 0 .7rem 0 0;
+        }
+
+        .table tbody tr {
+            border-color: #edf0ee;
+        }
+
+        .table tbody tr:hover {
+            background: #f0fdf4;
+        }
+
+        .input,
+        .select,
+        .textarea,
+        input[type="file"],
+        input:not([type]),
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="date"],
+        input[type="tel"],
+        input[type="url"] {
+            border: 1px solid #9ca3af !important;
+            background: #fff;
+        }
+
+        input:not([type]),
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="date"],
+        input[type="tel"],
+        input[type="url"] {
+            width: 100%;
+            min-height: 3rem;
+            padding: .65rem 1rem;
+            border-radius: .5rem;
+        }
+
+        .input:hover,
+        .select:hover,
+        .textarea:hover,
+        input:not([type]):hover,
+        input[type="text"]:hover,
+        input[type="email"]:hover,
+        input[type="password"]:hover,
+        input[type="number"]:hover,
+        input[type="date"]:hover,
+        input[type="tel"]:hover,
+        input[type="url"]:hover {
+            border-color: #6b7280 !important;
+        }
+
+        .input:focus,
+        .select:focus,
+        .textarea:focus,
+        input:not([type]):focus,
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        input[type="tel"]:focus,
+        input[type="url"]:focus {
+            border-color: var(--green) !important;
+            outline: 2px solid #a7f3d0 !important;
+            outline-offset: 1px;
+        }
+
+        .card-actions,
+        .modal-action,
+        [data-button-row] {
+            gap: .75rem;
+        }
+
+        .password-field-wrap {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-field-wrap input {
+            padding-right: 3rem !important;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: .4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: .5rem;
+            display: grid;
+            place-items: center;
+            color: #6b7280;
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .password-toggle:hover {
+            color: #047857;
+            background: #ecfdf5;
+        }
+
+        .password-toggle:focus-visible {
+            outline: 2px solid #059669;
+            outline-offset: 1px;
+        }
+
+        .helptext {
+            display: block;
+            margin-top: .5rem;
+            color: #6b7280;
+            font-size: .78rem;
+            line-height: 1.5;
+        }
+
+        .helptext ul {
+            list-style: disc;
+            padding-left: 1.25rem;
+            margin-top: .35rem;
+            display: grid;
+            gap: .2rem;
+        }
+
+        .errorlist {
+            color: #dc2626;
+            font-size: 0.8rem;
+        }
+
+        .label-text {
+            font-weight: 600;
+        }
+
+        @media (max-width: 1023px) {
+            .pp-side {
+                transform: translateX(-100%);
+                transition: 0.25s;
+            }
+
+            .pp-side.open {
+                transform: none;
+            }
+
+            .pp-main {
+                margin-left: 0;
+            }
+        }
     </style>
   </head>
   <body class="bg-base-200 min-h-screen">
     {% if user.is_authenticated %}
-      <button id="mobile-menu" class="lg:hidden fixed top-2.5 left-4 z-[70] bg-white border border-base-300 rounded-xl w-11 h-11 text-emerald-600 shadow-sm"><i class="fa-solid fa-bars"></i></button><div id="overlay" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 lg:hidden"></div>
-      <aside id="sidebar" class="pp-side fixed inset-y-0 left-0 z-50 bg-base-100 border-r border-base-200 flex flex-col shadow-xl lg:shadow-sm">
+      <button id="mobile-menu"
+              class="lg:hidden fixed top-2.5 left-4 z-[70] bg-white border border-base-300 rounded-xl w-11 h-11 text-emerald-600 shadow-sm">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div id="overlay"
+           class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 lg:hidden"></div>
+      <aside id="sidebar"
+             class="pp-side fixed inset-y-0 left-0 z-50 bg-base-100 border-r border-base-200 flex flex-col shadow-xl lg:shadow-sm">
         <div class="flex justify-center items-center px-6 pt-5 h-28">
-          <img src="{% static 'images/powerpaylogo.png' %}" alt="PowerPay" class="w-44 h-auto" />
+          <img src="{% static 'images/powerpaylogo.png' %}"
+               alt="PowerPay"
+               class="w-44 h-auto" />
         </div>
         <div class="px-6">
           <div class="h-px bg-gradient-to-r from-transparent via-base-300 to-transparent my-3"></div>
         </div>
         <nav class="flex-1 overflow-y-auto px-3 pb-4 text-[13px] font-medium">
-          <p class="px-4 pt-2 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Main</p><a href="{% url 'dashboard' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if request.path == '/dashboard/' %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-chart-line"></i></span>Overview</a>
-          {% if user.is_superuser %}<p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Platform control</p><a href="{% url 'platform_organizations' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/organizations/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-building-shield"></i></span>Organizations</a><a href="{% url 'platform_users' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/users/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-users-gear"></i></span>All users</a><a href="{% url 'platform_activity' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/activity/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-clock-rotate-left"></i></span>System activity</a><p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Resources</p><a href="{% url 'storyboard' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/storyboard/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-map"></i></span>Storyboard</a>{% endif %}
+          <p class="px-4 pt-2 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Main</p><a href="{% url 'dashboard' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if request.path == '/dashboard/' %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-chart-line"></i></span>Overview</a>
+          {% if user.is_superuser %}<p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Platform control</p><a href="{% url 'platform_organizations' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/organizations/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-building-shield"></i></span>Organizations</a><a href="{% url 'platform_users' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/users/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-users-gear"></i></span>All users</a><a href="{% url 'platform_activity' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/platform/activity/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-clock-rotate-left"></i></span>System activity</a><p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Resources</p><a href="{% url 'storyboard' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/storyboard/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-map"></i></span>Storyboard</a>{% endif %}
           {% if not user.is_superuser %}
-            <p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Work</p><a href="{% url 'chats' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/chats/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-comments"></i></span><span class="flex-1">Chats</span>{% if unread_chat_count %}<span class="badge badge-primary badge-sm text-white">{{ unread_chat_count }}</span>{% endif %}</a><a href="{% url 'tasks' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/tasks/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-list-check"></i></span>Tasks</a><a href="{% url 'timesheets' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/timesheets/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-clock"></i></span>Timesheets</a><a href="{% url 'leave_dashboard' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/leave/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-umbrella-beach"></i></span>Leave</a><a href="{% url 'item_requests' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/item-requests/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-basket-shopping"></i></span>Item requests</a><a href="{% url 'payment_vouchers' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/payment-vouchers/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-money-check-dollar"></i></span>Payment vouchers</a>
+            <p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Work</p><a href="{% url 'chats' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/chats/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-comments"></i></span><span class="flex-1">Chats</span>{% if unread_chat_count %}<span class="badge badge-primary badge-sm text-white">{{ unread_chat_count }}</span>{% endif %}</a><a href="{% url 'tasks' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/tasks/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-list-check"></i></span>Tasks</a><a href="{% url 'timesheets' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/timesheets/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-clock"></i></span>Timesheets</a><a href="{% url 'leave_dashboard' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/leave/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-umbrella-beach"></i></span>Leave</a><a href="{% url 'item_requests' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/item-requests/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-basket-shopping"></i></span>Item requests</a><a href="{% url 'payment_vouchers' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/payment-vouchers/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-money-check-dollar"></i></span>Payment vouchers</a>
             {% if current_profile.role != 'employee' %}
-              <a href="{% url 'employees' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/employees/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-users"></i></span>Employees</a>
+              <a href="{% url 'employees' %}"
+                 class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/employees/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-users"></i></span>Employees</a>
             {% endif %}
             {% if current_profile.role == 'admin' %}
-              <a href="{% url 'departments' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/departments/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-building"></i></span>Departments</a>
+              <a href="{% url 'departments' %}"
+                 class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/departments/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-building"></i></span>Departments</a>
             {% endif %}
-            <p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Resources</p><a href="{% url 'documents' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/documents/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-folder-open"></i></span>Documents</a><a href="{% url 'storyboard' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/storyboard/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-map"></i></span>Storyboard</a>{% if current_profile.role == 'admin' %}
-              <a href="{% url 'templates' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/templates/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-file-lines"></i></span>Templates</a><a href="{% url 'audit_logs' %}" class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/audit/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-shield-halved"></i></span>Audit log</a>
-            {% endif %}
+            <p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Resources</p><a href="{% url 'documents' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/documents/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-folder-open"></i></span>Documents</a><a href="{% url 'storyboard' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/storyboard/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-map"></i></span>Storyboard</a>{% if current_profile.role == 'admin' %}
+            <a href="{% url 'templates' %}"
+               class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/templates/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-regular fa-file-lines"></i></span>Templates</a><a href="{% url 'audit_logs' %}"
+   class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/audit/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-shield-halved"></i></span>Audit log</a>
           {% endif %}
-        </nav>
-        <div class="p-3 border-t border-base-200">
-          <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}<button class="side-link w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-red-500 hover:bg-red-50"><span class="w-8 h-8 rounded-lg bg-red-50 grid place-items-center"><i class="fa-solid fa-right-from-bracket"></i></span>Logout</button>
-          </form>
-        </div>
-      </aside>
-      <div class="pp-main min-h-screen">
-        <header class="sticky top-0 z-30 h-16 px-4 sm:px-6 lg:px-8 bg-base-100/85 backdrop-blur-xl border-b border-base-200 flex items-center">
-          <div class="w-12 lg:hidden"></div><h1 class="hidden lg:block text-lg font-semibold">
-            {% block page_title %}
-              PowerpayERP
-            {% endblock %}
-          </h1><div class="ml-auto flex items-center gap-2">
-            <div id="notification-menu" class="relative">
-              <button id="notification-toggle" type="button" class="btn btn-ghost btn-circle text-orange-500 relative hover:bg-orange-50" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><i class="fa-solid fa-bell text-lg"></i><span id="notification-badge" class="{% if not unread_notifications %}hidden {% endif %}absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-[9px] font-bold text-white grid place-items-center ring-2 ring-white">{{ unread_notifications }}</span>{% if unread_notifications %}<span data-notification-ping class="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 animate-ping opacity-60"></span>{% endif %}</button>
-              <div id="notification-panel" class="hidden absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-2xl shadow-slate-900/15 z-[70]">
-                <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-base-200 bg-gradient-to-r from-emerald-50 to-orange-50"><div><div class="flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-emerald-600 text-white grid place-items-center"><i class="fa-solid fa-bell"></i></span><div><h3 class="font-bold leading-tight">Notifications</h3><p id="notification-summary" class="text-[11px] opacity-55">{% if unread_notifications %}{{ unread_notifications }} unread update{{ unread_notifications|pluralize }}{% else %}You’re all caught up{% endif %}</p></div></div></div><button type="button" data-notification-read-all data-url="{% url 'notifications_read_all' %}" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline {% if not unread_notifications %}hidden{% endif %}">Mark all read</button></div>
-                <div id="notification-items" class="max-h-[26rem] overflow-y-auto divide-y divide-base-200">{% for n in recent_notifications %}<a href="{{ n.url|default:'#' }}" data-notification-item data-notification-id="{{ n.pk }}" data-read-url="{% url 'notification_read' n.pk %}" class="group flex gap-3 px-4 py-3.5 transition-colors hover:bg-base-200/70 {% if not n.is_read %}bg-orange-50/70{% endif %}"><span data-notification-icon class="mt-0.5 w-10 h-10 shrink-0 rounded-xl {% if not n.is_read %}bg-orange-500 text-white{% else %}bg-base-200 text-base-content/45{% endif %} grid place-items-center"><i class="fa-solid {% if 'task' in n.title|lower %}fa-list-check{% elif 'voucher' in n.title|lower %}fa-money-check-dollar{% elif 'channel' in n.title|lower or 'chat' in n.title|lower %}fa-comments{% elif 'timesheet' in n.title|lower %}fa-clock{% else %}fa-bell{% endif %}"></i></span><span class="min-w-0 flex-1"><span class="flex items-start justify-between gap-3"><b class="text-sm leading-5 truncate">{{ n.title }}</b>{% if not n.is_read %}<i data-unread-dot class="mt-1.5 w-2 h-2 shrink-0 rounded-full bg-orange-500"></i>{% endif %}</span><span class="block text-xs text-base-content/60 mt-0.5 line-clamp-2">{{ n.message|default:'Open this update for more details.' }}</span><span class="block text-[10px] text-base-content/40 mt-1.5"><i class="fa-regular fa-clock mr-1"></i>{{ n.created_at|timesince }} ago</span></span></a>{% empty %}<div id="notification-empty" class="px-6 py-12 text-center"><span class="mx-auto w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center text-xl"><i class="fa-regular fa-bell-slash"></i></span><h4 class="font-bold mt-3">No notifications yet</h4><p class="text-xs opacity-50 mt-1">Updates about tasks, approvals and conversations will appear here.</p></div>{% endfor %}</div>
-                <a href="{% url 'notifications' %}" class="flex items-center justify-center gap-2 px-5 py-3.5 border-t border-base-200 bg-base-200/40 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors">View all notifications <i class="fa-solid fa-arrow-right text-xs"></i></a>
-              </div>
-            </div><div class="dropdown dropdown-end">
-              <button tabindex="0" class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-base-200"><span class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-700 text-white grid place-items-center font-bold">{{ user.first_name.0|default:'U' }}{{ user.last_name.0 }}</span><span class="hidden sm:block text-left"><b class="block text-xs">{{ user.get_full_name|default:user.username }}</b><small class="block opacity-50">{{ current_profile.get_role_display|default:'Platform admin' }}</small></span><i class="fa-solid fa-chevron-down text-[9px] opacity-40"></i></button><ul tabindex="0" class="dropdown-content menu z-[60] mt-2 w-56 rounded-2xl bg-base-100 shadow-2xl border border-base-200 p-2">
-                <li>
-                  <form action="{% url 'logout' %}" method="post">
-                    {% csrf_token %}<button class="text-red-500"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
-                  </form>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </header>
-        <main class="p-4 sm:p-6 lg:p-8">
-          {% block content %}
-          {% endblock %}
-        </main>
-      </div>
-      <dialog id="form-modal" class="modal modal-bottom sm:modal-middle">
-        <div class="modal-box max-w-2xl max-h-[90vh] p-0 overflow-hidden bg-base-100">
-          <div class="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-base-200 bg-base-100">
-            <h2 id="form-modal-title" class="text-xl font-bold">Form</h2>
-            <button type="button" class="btn btn-ghost btn-sm btn-circle" data-close-modal aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-          </div>
-          <div id="form-modal-body" class="p-6 overflow-y-auto max-h-[calc(90vh-5rem)]"></div>
-        </div>
-        <form method="dialog" class="modal-backdrop"><button>close</button></form>
-      </dialog>
-      <script>
-        const s = document.getElementById('sidebar'),
-          o = document.getElementById('overlay')
-        document.getElementById('mobile-menu')?.addEventListener('click', () => {
-          s.classList.add('open')
-          o.classList.remove('hidden')
-        })
-        o?.addEventListener('click', () => {
-          s.classList.remove('open')
-          o.classList.add('hidden')
-        })
-
-        const notificationMenu=document.getElementById('notification-menu'),notificationToggle=document.getElementById('notification-toggle'),notificationPanel=document.getElementById('notification-panel'),notificationBadge=document.getElementById('notification-badge'),notificationSummary=document.getElementById('notification-summary')
-        function csrfCookie(){return document.cookie.split('; ').find(row=>row.startsWith('csrftoken='))?.split('=').slice(1).join('=')||''}
-        async function postNotification(url){
-          const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfCookie()),'X-Requested-With':'XMLHttpRequest'}})
-          if(!response.ok)throw new Error('Notification update failed')
-          return response.json()
-        }
-        function setNotificationCount(value){
-          const count=Math.max(0,Number(value)||0)
-          if(notificationBadge){notificationBadge.textContent=count;notificationBadge.classList.toggle('hidden',count===0)}
-          if(notificationSummary)notificationSummary.textContent=count?`${count} unread update${count===1?'':'s'}`:'You’re all caught up'
-          document.querySelectorAll('[data-notification-read-all]').forEach(button=>button.classList.toggle('hidden',count===0))
-          if(count===0)document.querySelectorAll('[data-notification-ping]').forEach(item=>item.remove())
-        }
-        function showNotificationAsRead(item){
-          item.classList.remove('bg-orange-50/70','bg-orange-50/50','border-orange-400')
-          item.classList.add('border-transparent')
-          const icon=item.querySelector('[data-notification-icon]')
-          icon?.classList.remove('bg-orange-500','text-white','shadow-lg','shadow-orange-500/20')
-          icon?.classList.add('bg-base-200','text-base-content/45')
-          item.querySelector('[data-unread-dot]')?.remove()
-          item.dataset.notificationRead='true'
-        }
-        notificationToggle?.addEventListener('click',event=>{
-          event.stopPropagation();const opening=notificationPanel.classList.contains('hidden');notificationPanel.classList.toggle('hidden',!opening);notificationToggle.setAttribute('aria-expanded',String(opening))
-        })
-        document.addEventListener('click',event=>{if(notificationMenu&&!notificationMenu.contains(event.target)){notificationPanel?.classList.add('hidden');notificationToggle?.setAttribute('aria-expanded','false')}})
-        document.addEventListener('keydown',event=>{if(event.key==='Escape'){notificationPanel?.classList.add('hidden');notificationToggle?.setAttribute('aria-expanded','false')}})
-        document.querySelectorAll('[data-notification-item]').forEach(item=>item.addEventListener('click',async event=>{
-          if(item.dataset.notificationRead==='true'||!item.querySelector('[data-unread-dot]'))return
-          event.preventDefault();const destination=item.getAttribute('href')
-          try{const result=await postNotification(item.dataset.readUrl);document.querySelectorAll(`[data-notification-id="${item.dataset.notificationId}"]`).forEach(showNotificationAsRead);setNotificationCount(result.unread)}catch(error){console.error(error)}
-          if(destination&&destination!=='#')location.assign(destination)
-        }))
-        document.querySelectorAll('[data-notification-read-all]').forEach(button=>button.addEventListener('click',async()=>{
-          button.disabled=true
-          try{const result=await postNotification(button.dataset.url);document.querySelectorAll('[data-notification-item]').forEach(showNotificationAsRead);setNotificationCount(result.unread)}catch(error){console.error(error)}finally{button.disabled=false}
-        }))
-
-        const formModal=document.getElementById('form-modal'), formModalBody=document.getElementById('form-modal-body'), formModalTitle=document.getElementById('form-modal-title')
-        const modalParser=new DOMParser()
-        function initializePopupForm(root){
-          function initializeLines({hostSelector,templateSelector,addSelector,rowSelector,removeSelector}){const host=root.querySelector(hostSelector),total=root.querySelector('#id_lines-TOTAL_FORMS'),template=root.querySelector(templateSelector),add=root.querySelector(addSelector);if(!host||!total||!template||!add)return;function bind(row){const remove=row.querySelector(removeSelector);if(!remove||remove.dataset.ready)return;remove.dataset.ready='true';remove.addEventListener('click',()=>{const visible=[...host.querySelectorAll(rowSelector)].filter(item=>!item.classList.contains('hidden'));if(visible.length===1)return;const del=row.querySelector('input[name$="-DELETE"]');if(del)del.checked=true;row.classList.add('hidden')})}host.querySelectorAll(rowSelector).forEach(bind);if(!add.dataset.ready){add.dataset.ready='true';add.addEventListener('click',()=>{const index=Number(total.value),wrap=document.createElement('div');wrap.innerHTML=template.innerHTML.replaceAll('__prefix__',index);const row=wrap.firstElementChild;host.append(row);total.value=index+1;bind(row);row.querySelector('input:not([type=hidden])')?.focus()})}}
-          initializeLines({hostSelector:'#voucher-lines',templateSelector:'#empty-voucher-line',addSelector:'#add-voucher-line',rowSelector:'.voucher-line',removeSelector:'.remove-voucher-line'})
-          initializeLines({hostSelector:'#item-lines',templateSelector:'#empty-item-line',addSelector:'#add-item-line',rowSelector:'.item-line',removeSelector:'.remove-item-line'})
-        }
-        function prepareModalActions(form){
-          let actions=form.querySelector('.card-actions,.modal-action'),primary=[...form.querySelectorAll('button')].find(button=>button.type==='submit'&&!button.name)
-          if(!actions){actions=document.createElement('div');form.append(actions)}
-          actions.className='flex flex-wrap items-center justify-end gap-3 mt-6'
-          actions.querySelectorAll('a[href*="history.back"],button[data-modal-cancel],button[name="_add_another"]').forEach(item=>item.remove())
-          const cancel=document.createElement('button');cancel.type='button';cancel.dataset.modalCancel='';cancel.className='btn btn-ghost';cancel.textContent='Cancel';cancel.addEventListener('click',()=>formModal.close())
-          if(primary){primary.classList.add('text-white');actions.replaceChildren(cancel);if(form.hasAttribute('data-allow-add-another')){const addAnother=document.createElement('button'),verb=primary.textContent.trim().toLowerCase().startsWith('create')?'Create':'Save';addAnother.type='submit';addAnother.name='_add_another';addAnother.value='1';addAnother.className='btn btn-outline border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:border-emerald-600 hover:text-white';addAnother.textContent=`${verb} and add another`;actions.append(addAnother)}actions.append(primary)}else{actions.append(cancel)}
-        }
-        function bindModalForm(form){
-          if(form.hasAttribute('data-download-form')){form.addEventListener('submit',()=>setTimeout(()=>formModal.close(),300));return}
-          form.addEventListener('submit',async event=>{
-            event.preventDefault()
-            const submitter=event.submitter, data=new FormData(form)
-            if(submitter?.name)data.set(submitter.name,submitter.value)
-            submitter?.classList.add('loading'); 
-            if(submitter)submitter.disabled=true
-            try{
-              const formAction=form.getAttribute('action')||location.href
-              const response=await fetch(formAction,{method:(form.method||'post').toUpperCase(),body:data,credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
-              const html=await response.text(),doc=modalParser.parseFromString(html,'text/html')
-              if(response.redirected){const notices=[...doc.querySelectorAll('[data-app-message]')].map(item=>({type:item.dataset.type,text:item.dataset.text}));if(submitter?.name==='_add_another'){const nextForm=doc.querySelector('main form[data-popup-page],main form[data-popup-form]');if(nextForm){showForm(nextForm,formModalTitle.textContent,response.url);if(notices.length){const notice=document.createElement('div');notice.className='alert bg-emerald-50 text-emerald-900 border border-emerald-200 mb-5';notice.innerHTML='<i class="fa-solid fa-circle-check"></i><span></span>';notice.querySelector('span').textContent=notices[0].text;formModalBody.prepend(notice);setTimeout(()=>notice.remove(),3000)}return}}if(notices.length)sessionStorage.setItem('powerpay_messages',JSON.stringify(notices));formModal.close();location.reload();return}
-              const replacement=doc.querySelector('main form')
-              if(replacement){if(!replacement.getAttribute('action'))replacement.setAttribute('action',formAction);formModalBody.replaceChildren(replacement);prepareModalActions(replacement);bindModalForm(replacement);initializePopupForm(replacement)}else{formModal.close();location.reload()}
-            }catch(error){submitter?.classList.remove('loading');if(submitter)submitter.disabled=false;alert('The form could not be submitted. Please try again.')}
-          })
-        }
-        function showForm(form,title,action){
-          const copy=form.cloneNode(true);
-          // Inline popup triggers hide their source form on the page. The modal
-          // clone must be visible even when the source itself carries `hidden`.
-          copy.classList.remove('hidden');
-          if(action)copy.setAttribute('action',action)
-          formModalTitle.textContent=title||copy.querySelector('h2,h3')?.textContent?.trim()||'Form'
-          copy.querySelector('h2,h3')?.remove(); 
-          formModalBody.replaceChildren(copy);prepareModalActions(copy);bindModalForm(copy);initializePopupForm(copy);if(!formModal.open)formModal.showModal();copy.querySelector('input:not([type=hidden]),select,textarea')?.focus()
-        }
-        async function openRemoteForm(url,title){
-          formModalTitle.textContent=title||'Loading…';formModalBody.innerHTML='<div class="py-12 text-center"><span class="loading loading-spinner loading-lg text-primary"></span></div>';formModal.showModal()
-          try{const response=await fetch(url,{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}});const doc=modalParser.parseFromString(await response.text(),'text/html'),form=doc.querySelector('main form');if(!form)throw new Error('Form not found');showForm(form,title||doc.querySelector('main h2,main h1')?.textContent?.trim(),url)}catch(error){formModalBody.innerHTML='<div class="alert alert-error">The form could not be loaded.</div>'}
-        }
-        document.querySelectorAll('a[data-modal]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();openRemoteForm(link.href,link.dataset.modalTitle)}))
-        document.querySelectorAll('main form[data-popup-form]').forEach(form=>{
-          const host=form.closest('.card')||form,trigger=document.createElement('button'),actions=document.querySelector('[data-page-actions]');trigger.type='button';trigger.className=form.dataset.popupClass||'btn btn-primary text-white';trigger.innerHTML=form.dataset.popupIcon?`<i class="${form.dataset.popupIcon}"></i> ${form.dataset.popupLabel}`:form.dataset.popupLabel||'Open form';actions?actions.append(trigger):host.before(trigger);host.classList.add('hidden');trigger.addEventListener('click',()=>showForm(form,form.dataset.popupTitle))
-        })
-        const pagePopup=document.querySelector('main form[data-popup-page]');if(pagePopup){pagePopup.closest('.card')?.classList.add('hidden');showForm(pagePopup,pagePopup.dataset.popupTitle||document.querySelector('main h2')?.textContent?.trim())}
-        document.querySelectorAll('[data-close-modal]').forEach(button=>button.addEventListener('click',()=>formModal.close()))
-      </script>
-    {% else %}
-      {% block public_content %}
-      {% endblock %}
     {% endif %}
-    <div class="hidden" aria-hidden="true">{% for message in messages %}<span data-app-message data-type="{{ message.tags|default:'info' }}" data-text="{{ message|escape }}"></span>{% endfor %}</div>
-    <dialog id="message-modal" class="fixed inset-0 z-[9999] m-0 h-full w-full max-w-none bg-transparent p-0 backdrop:bg-slate-950/40 backdrop:backdrop-blur-sm">
-      <div class="flex min-h-full items-start justify-center px-4 pt-6 sm:justify-end sm:px-6 lg:px-8">
-        <div id="message-box" class="relative w-full max-w-sm overflow-hidden rounded-2xl bg-base-100 shadow-2xl shadow-base-content/10 border border-base-300 opacity-0 -translate-y-3 scale-[.97] transition-all duration-300">
-          <div id="message-accent" class="absolute inset-x-0 top-0 h-1 bg-success"></div>
-          <button id="message-close" type="button" class="absolute right-3 top-3 z-10 btn btn-ghost btn-sm btn-circle"><i class="fa-solid fa-xmark"></i></button>
-          <div class="p-5 pr-12"><div class="flex items-start gap-3"><div id="message-icon-wrap" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success"><i id="message-icon" class="fa-solid fa-circle-check text-lg"></i></div><div class="min-w-0 flex-1"><p id="message-label" class="text-[10px] font-bold uppercase tracking-widest text-success">Success</p><h3 id="message-title" class="mt-0.5 text-base font-bold text-base-content">Success</h3><p id="message-text" class="mt-1 text-sm text-base-content/70 leading-relaxed"></p></div></div></div>
-          <div class="px-5 pb-4"><div class="h-1 w-full overflow-hidden rounded-full bg-base-200"><div id="message-progress" class="h-full w-full rounded-full bg-success"></div></div></div>
+    {% if can_access_api %}
+      <p class="px-4 pt-5 pb-2 text-[10px] uppercase tracking-widest text-base-content/40">Developers</p>
+      <a href="{% url 'api:swagger-ui' %}"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="side-link flex items-center gap-3.5 px-4 py-2.5 rounded-xl {% if '/api/' in request.path %}active{% endif %}"><span class="nav-icon w-8 h-8 rounded-lg grid place-items-center"><i class="fa-solid fa-code"></i></span>API documentation</a>
+    {% endif %}
+  </nav>
+  <div class="p-3 border-t border-base-200">
+    <form action="{% url 'logout' %}" method="post">
+      {% csrf_token %}<button class="side-link w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-red-500 hover:bg-red-50"><span class="w-8 h-8 rounded-lg bg-red-50 grid place-items-center"><i class="fa-solid fa-right-from-bracket"></i></span>Logout</button>
+    </form>
+  </div>
+</aside>
+<div class="pp-main min-h-screen">
+  <header class="sticky top-0 z-30 h-16 px-4 sm:px-6 lg:px-8 bg-base-100/85 backdrop-blur-xl border-b border-base-200 flex items-center">
+    <div class="w-12 lg:hidden"></div>
+    <h1 class="hidden lg:block text-lg font-semibold">
+      {% block page_title %}
+        PowerpayERP
+      {% endblock %}
+    </h1>
+    {% if not user.is_superuser %}
+      <form action="{% url 'global_search' %}"
+            method="get"
+            class="hidden md:block ml-auto mr-3 w-full max-w-sm">
+        <label class="input input-bordered input-sm flex items-center gap-2 bg-base-100">
+          <i class="fa-solid fa-magnifying-glass opacity-40"></i>
+          <input type="search"
+                 name="q"
+                 value="{{ request.GET.q }}"
+                 minlength="2"
+                 class="grow"
+                 placeholder="Search ERP records…"
+                 aria-label="Search ERP records">
+        </label>
+      </form>
+    {% endif %}
+    <div class="{% if user.is_superuser %}ml-auto {% endif %}flex items-center gap-2">
+      <div id="notification-menu" class="relative">
+        <button id="notification-toggle"
+                type="button"
+                class="btn btn-ghost btn-circle text-orange-500 relative hover:bg-orange-50"
+                aria-label="Notifications"
+                aria-haspopup="true"
+                aria-expanded="false"><i class="fa-solid fa-bell text-lg"></i><span id="notification-badge"
+      class="{% if not unread_notifications %}hidden {% endif %}absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-[9px] font-bold text-white grid place-items-center ring-2 ring-white">{{ unread_notifications }}</span>{% if unread_notifications %}<span data-notification-ping
+      class="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-400 animate-ping opacity-60"></span>{% endif %}</button>
+        <div id="notification-panel"
+             class="hidden absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-2xl shadow-slate-900/15 z-[70]">
+          <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-base-200 bg-gradient-to-r from-emerald-50 to-orange-50"><div><div class="flex items-center gap-2"><span class="w-8 h-8 rounded-xl bg-emerald-600 text-white grid place-items-center"><i class="fa-solid fa-bell"></i></span><div><h3 class="font-bold leading-tight">Notifications</h3><p id="notification-summary" class="text-[11px] opacity-55">{% if unread_notifications %}{{ unread_notifications }} unread update{{ unread_notifications|pluralize }}{% else %}You’re all caught up{% endif %}</p></div></div></div><button type="button"
+        data-notification-read-all
+        data-url="{% url 'notifications_read_all' %}"
+        class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline {% if not unread_notifications %}hidden{% endif %}">Mark all read</button></div>
+          <div id="notification-items"
+               class="max-h-[26rem] overflow-y-auto divide-y divide-base-200">{% for n in recent_notifications %}<a href="{{ n.url|default:'#' }}"
+   data-notification-item
+   data-notification-id="{{ n.pk }}"
+   data-read-url="{% url 'notification_read' n.pk %}"
+   class="group flex gap-3 px-4 py-3.5 transition-colors hover:bg-base-200/70 {% if not n.is_read %}bg-orange-50/70{% endif %}"><span data-notification-icon
+      class="mt-0.5 w-10 h-10 shrink-0 rounded-xl {% if not n.is_read %}bg-orange-500 text-white{% else %}bg-base-200 text-base-content/45{% endif %} grid place-items-center"><i class="fa-solid {% if 'task' in n.title|lower %}fa-list-check{% elif 'voucher' in n.title|lower %}fa-money-check-dollar{% elif 'channel' in n.title|lower or 'chat' in n.title|lower %}fa-comments{% elif 'timesheet' in n.title|lower %}fa-clock{% else %}fa-bell{% endif %}"></i></span><span class="min-w-0 flex-1"><span class="flex items-start justify-between gap-3"><b class="text-sm leading-5 truncate">{{ n.title }}</b>{% if not n.is_read %}<i data-unread-dot
+   class="mt-1.5 w-2 h-2 shrink-0 rounded-full bg-orange-500"></i>{% endif %}</span><span class="block text-xs text-base-content/60 mt-0.5 line-clamp-2">{{ n.message|default:'Open this update for more details.' }}</span><span class="block text-[10px] text-base-content/40 mt-1.5"><i class="fa-regular fa-clock mr-1"></i>{{ n.created_at|timesince }} ago</span></span></a>{% empty %}<div id="notification-empty" class="px-6 py-12 text-center"><span class="mx-auto w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center text-xl"><i class="fa-regular fa-bell-slash"></i></span><h4 class="font-bold mt-3">No notifications yet</h4><p class="text-xs opacity-50 mt-1">Updates about tasks, approvals and conversations will appear here.</p></div>{% endfor %}</div>
+          <a href="{% url 'notifications' %}"
+             class="flex items-center justify-center gap-2 px-5 py-3.5 border-t border-base-200 bg-base-200/40 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors">View all notifications <i class="fa-solid fa-arrow-right text-xs"></i></a>
         </div>
       </div>
-    </dialog>
-    <script>
-      const messageModal=document.getElementById('message-modal'),messageBox=document.getElementById('message-box'),messageQueue=[]
-      const messageStyles={success:{label:'Success',accent:'bg-success',text:'text-success',box:'bg-success/10 text-success',bar:'bg-success',icon:'fa-solid fa-circle-check text-lg'},error:{label:'Error',accent:'bg-error',text:'text-error',box:'bg-error/10 text-error',bar:'bg-error',icon:'fa-solid fa-circle-exclamation text-lg'},warning:{label:'Warning',accent:'bg-warning',text:'text-warning',box:'bg-warning/10 text-warning',bar:'bg-warning',icon:'fa-solid fa-triangle-exclamation text-lg'},info:{label:'Info',accent:'bg-info',text:'text-info',box:'bg-info/10 text-info',bar:'bg-info',icon:'fa-solid fa-circle-info text-lg'}}
-      let messageTimer
-      function closeMessage(){clearTimeout(messageTimer);messageBox.classList.add('opacity-0','-translate-y-3','scale-[.97]');messageBox.classList.remove('opacity-100','translate-y-0','scale-100');setTimeout(()=>{if(messageModal.open)messageModal.close();if(messageQueue.length)showNextMessage()},260)}
-      function showNextMessage(){if(!messageQueue.length)return;const item=messageQueue.shift(),type=(item.type||'info').split(' ')[0],style=messageStyles[type]||messageStyles.info,progress=document.getElementById('message-progress');document.getElementById('message-label').textContent=style.label;document.getElementById('message-title').textContent=style.label;document.getElementById('message-text').textContent=item.text;document.getElementById('message-accent').className=`absolute inset-x-0 top-0 h-1 ${style.accent}`;document.getElementById('message-label').className=`text-[10px] font-bold uppercase tracking-widest ${style.text}`;document.getElementById('message-icon-wrap').className=`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.box}`;document.getElementById('message-icon').className=style.icon;progress.className=`h-full w-full rounded-full ${style.bar}`;progress.style.transition='none';progress.style.width='100%';messageModal.showModal();requestAnimationFrame(()=>{messageBox.classList.remove('opacity-0','-translate-y-3','scale-[.97]');messageBox.classList.add('opacity-100','translate-y-0','scale-100');setTimeout(()=>{progress.style.transition='width 3400ms linear';progress.style.width='0%'},60)});messageTimer=setTimeout(closeMessage,3500)}
-      document.querySelectorAll('[data-app-message]').forEach(item=>messageQueue.push({type:item.dataset.type,text:item.dataset.text}));try{const carried=JSON.parse(sessionStorage.getItem('powerpay_messages')||'[]');messageQueue.push(...carried);sessionStorage.removeItem('powerpay_messages')}catch(error){}document.getElementById('message-close').addEventListener('click',closeMessage);messageModal.addEventListener('click',event=>{if(event.target===messageModal)closeMessage()});showNextMessage()
-    </script>
-    <script>
-      function installPasswordToggles(root=document){root.querySelectorAll('input[type="password"]:not([data-password-toggle-ready])').forEach(input=>{input.dataset.passwordToggleReady='true';const wrap=document.createElement('div');wrap.className='password-field-wrap';input.parentNode.insertBefore(wrap,input);wrap.append(input);const button=document.createElement('button');button.type='button';button.className='password-toggle';button.setAttribute('aria-label','Show password');button.setAttribute('aria-pressed','false');button.innerHTML='<i class="fa-regular fa-eye"></i>';button.addEventListener('click',()=>{const show=input.type==='password';input.type=show?'text':'password';button.setAttribute('aria-label',show?'Hide password':'Show password');button.setAttribute('aria-pressed',String(show));button.innerHTML=show?'<i class="fa-regular fa-eye-slash"></i>':'<i class="fa-regular fa-eye"></i>';input.focus({preventScroll:true})});wrap.append(button)})}
-      installPasswordToggles();new MutationObserver(mutations=>mutations.forEach(mutation=>mutation.addedNodes.forEach(node=>{if(node.nodeType===1)installPasswordToggles(node)}))).observe(document.body,{childList:true,subtree:true})
-    </script>
-  </body>
+      <div class="dropdown dropdown-end">
+        <button tabindex="0"
+                class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-base-200"><span class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-700 text-white grid place-items-center font-bold">{{ user.first_name.0|default:'U' }}{{ user.last_name.0 }}</span><span class="hidden sm:block text-left"><b class="block text-xs">{{ user.get_full_name|default:user.username }}</b><small class="block opacity-50">{{ current_profile.get_role_display|default:'Platform admin' }}</small></span><i class="fa-solid fa-chevron-down text-[9px] opacity-40"></i></button>
+        <ul tabindex="0"
+            class="dropdown-content menu z-[60] mt-2 w-56 rounded-2xl bg-base-100 shadow-2xl border border-base-200 p-2">
+          {% if current_profile %}
+            <li>
+              <a href="{% url 'profile' %}"><i class="fa-regular fa-user"></i> My profile</a>
+            </li>
+          {% endif %}
+          <li>
+            <form action="{% url 'logout' %}" method="post">
+              {% csrf_token %}<button class="text-red-500"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </header>
+  <main class="p-4 sm:p-6 lg:p-8">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<dialog id="form-modal" class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-2xl max-h-[90vh] p-0 overflow-hidden bg-base-100">
+    <div class="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-base-200 bg-base-100">
+      <h2 id="form-modal-title" class="text-xl font-bold">Form</h2>
+      <button type="button"
+              class="btn btn-ghost btn-sm btn-circle"
+              data-close-modal
+              aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="form-modal-body"
+         class="p-6 overflow-y-auto max-h-[calc(90vh-5rem)]"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+<script>
+    const s = document.getElementById('sidebar'),
+        o = document.getElementById('overlay')
+    document.getElementById('mobile-menu')?.addEventListener('click', () => {
+        s.classList.add('open')
+        o.classList.remove('hidden')
+    })
+    o?.addEventListener('click', () => {
+        s.classList.remove('open')
+        o.classList.add('hidden')
+    })
+
+    const notificationMenu = document.getElementById('notification-menu'),
+        notificationToggle = document.getElementById('notification-toggle'),
+        notificationPanel = document.getElementById('notification-panel'),
+        notificationBadge = document.getElementById('notification-badge'),
+        notificationSummary = document.getElementById('notification-summary')
+
+    function csrfCookie() {
+        return document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=').slice(1).join('=') || ''
+    }
+    async function postNotification(url) {
+        const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRFToken': decodeURIComponent(csrfCookie()),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        if (!response.ok) throw new Error('Notification update failed')
+        return response.json()
+    }
+
+    function setNotificationCount(value) {
+        const count = Math.max(0, Number(value) || 0)
+        if (notificationBadge) {
+            notificationBadge.textContent = count;
+            notificationBadge.classList.toggle('hidden', count === 0)
+        }
+        if (notificationSummary) notificationSummary.textContent = count ? `${count} unread update${count===1?'':'s'}` : 'You’re all caught up'
+        document.querySelectorAll('[data-notification-read-all]').forEach(button => button.classList.toggle('hidden', count === 0))
+        if (count === 0) document.querySelectorAll('[data-notification-ping]').forEach(item => item.remove())
+    }
+
+    function showNotificationAsRead(item) {
+        item.classList.remove('bg-orange-50/70', 'bg-orange-50/50', 'border-orange-400')
+        item.classList.add('border-transparent')
+        const icon = item.querySelector('[data-notification-icon]')
+        icon?.classList.remove('bg-orange-500', 'text-white', 'shadow-lg', 'shadow-orange-500/20')
+        icon?.classList.add('bg-base-200', 'text-base-content/45')
+        item.querySelector('[data-unread-dot]')?.remove()
+        item.dataset.notificationRead = 'true'
+    }
+    notificationToggle?.addEventListener('click', event => {
+        event.stopPropagation();
+        const opening = notificationPanel.classList.contains('hidden');
+        notificationPanel.classList.toggle('hidden', !opening);
+        notificationToggle.setAttribute('aria-expanded', String(opening))
+    })
+    document.addEventListener('click', event => {
+        if (notificationMenu && !notificationMenu.contains(event.target)) {
+            notificationPanel?.classList.add('hidden');
+            notificationToggle?.setAttribute('aria-expanded', 'false')
+        }
+    })
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            notificationPanel?.classList.add('hidden');
+            notificationToggle?.setAttribute('aria-expanded', 'false')
+        }
+    })
+    document.querySelectorAll('[data-notification-item]').forEach(item => item.addEventListener('click', async event => {
+        if (item.dataset.notificationRead === 'true' || !item.querySelector('[data-unread-dot]')) return
+        event.preventDefault();
+        const destination = item.getAttribute('href')
+        try {
+            const result = await postNotification(item.dataset.readUrl);
+            document.querySelectorAll(`[data-notification-id="${item.dataset.notificationId}"]`).forEach(showNotificationAsRead);
+            setNotificationCount(result.unread)
+        } catch (error) {
+            console.error(error)
+        }
+        if (destination && destination !== '#') location.assign(destination)
+    }))
+    document.querySelectorAll('[data-notification-read-all]').forEach(button => button.addEventListener('click', async () => {
+        button.disabled = true
+        try {
+            const result = await postNotification(button.dataset.url);
+            document.querySelectorAll('[data-notification-item]').forEach(showNotificationAsRead);
+            setNotificationCount(result.unread)
+        } catch (error) {
+            console.error(error)
+        } finally {
+            button.disabled = false
+        }
+    }))
+
+    const formModal = document.getElementById('form-modal'),
+        formModalBody = document.getElementById('form-modal-body'),
+        formModalTitle = document.getElementById('form-modal-title')
+    const modalParser = new DOMParser()
+
+    function initializePopupForm(root) {
+        function initializeLines({
+            hostSelector,
+            templateSelector,
+            addSelector,
+            rowSelector,
+            removeSelector
+        }) {
+            const host = root.querySelector(hostSelector),
+                total = root.querySelector('#id_lines-TOTAL_FORMS'),
+                template = root.querySelector(templateSelector),
+                add = root.querySelector(addSelector);
+            if (!host || !total || !template || !add) return;
+
+            function bind(row) {
+                const remove = row.querySelector(removeSelector);
+                if (!remove || remove.dataset.ready) return;
+                remove.dataset.ready = 'true';
+                remove.addEventListener('click', () => {
+                    const visible = [...host.querySelectorAll(rowSelector)].filter(item => !item.classList.contains('hidden'));
+                    if (visible.length === 1) return;
+                    const del = row.querySelector('input[name$="-DELETE"]');
+                    if (del) del.checked = true;
+                    row.classList.add('hidden')
+                })
+            }
+            host.querySelectorAll(rowSelector).forEach(bind);
+            if (!add.dataset.ready) {
+                add.dataset.ready = 'true';
+                add.addEventListener('click', () => {
+                    const index = Number(total.value),
+                        wrap = document.createElement('div');
+                    wrap.innerHTML = template.innerHTML.replaceAll('__prefix__', index);
+                    const row = wrap.firstElementChild;
+                    host.append(row);
+                    total.value = index + 1;
+                    bind(row);
+                    row.querySelector('input:not([type=hidden])')?.focus()
+                })
+            }
+        }
+        initializeLines({
+            hostSelector: '#voucher-lines',
+            templateSelector: '#empty-voucher-line',
+            addSelector: '#add-voucher-line',
+            rowSelector: '.voucher-line',
+            removeSelector: '.remove-voucher-line'
+        })
+        initializeLines({
+            hostSelector: '#item-lines',
+            templateSelector: '#empty-item-line',
+            addSelector: '#add-item-line',
+            rowSelector: '.item-line',
+            removeSelector: '.remove-item-line'
+        })
+    }
+
+    function prepareModalActions(form) {
+        let actions = form.querySelector('.card-actions,.modal-action'),
+            primary = [...form.querySelectorAll('button')].find(button => button.type === 'submit' && !button.name)
+        if (!actions) {
+            actions = document.createElement('div');
+            form.append(actions)
+        }
+        actions.className = 'flex flex-wrap items-center justify-end gap-3 mt-6'
+        actions.querySelectorAll('a[href*="history.back"],button[data-modal-cancel],button[name="_add_another"]').forEach(item => item.remove())
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.dataset.modalCancel = '';
+        cancel.className = 'btn btn-ghost';
+        cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', () => formModal.close())
+        if (primary) {
+            primary.classList.add('text-white');
+            actions.replaceChildren(cancel);
+            if (form.hasAttribute('data-allow-add-another')) {
+                const addAnother = document.createElement('button'),
+                    verb = primary.textContent.trim().toLowerCase().startsWith('create') ? 'Create' : 'Save';
+                addAnother.type = 'submit';
+                addAnother.name = '_add_another';
+                addAnother.value = '1';
+                addAnother.className = 'btn btn-outline border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:border-emerald-600 hover:text-white';
+                addAnother.textContent = `${verb} and add another`;
+                actions.append(addAnother)
+            }
+            actions.append(primary)
+        } else {
+            actions.append(cancel)
+        }
+    }
+
+    function bindModalForm(form) {
+        if (form.hasAttribute('data-download-form')) {
+            form.addEventListener('submit', () => setTimeout(() => formModal.close(), 300));
+            return
+        }
+        form.addEventListener('submit', async event => {
+            event.preventDefault()
+            const submitter = event.submitter,
+                data = new FormData(form)
+            if (submitter?.name) data.set(submitter.name, submitter.value)
+            submitter?.classList.add('loading');
+            if (submitter) submitter.disabled = true
+            try {
+                const formAction = form.getAttribute('action') || location.href
+                const response = await fetch(formAction, {
+                    method: (form.method || 'post').toUpperCase(),
+                    body: data,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                const html = await response.text(),
+                    doc = modalParser.parseFromString(html, 'text/html')
+                if (response.redirected) {
+                    const notices = [...doc.querySelectorAll('[data-app-message]')].map(item => ({
+                        type: item.dataset.type,
+                        text: item.dataset.text
+                    }));
+                    if (submitter?.name === '_add_another') {
+                        const nextForm = doc.querySelector('main form[data-popup-page],main form[data-popup-form]');
+                        if (nextForm) {
+                            showForm(nextForm, formModalTitle.textContent, response.url);
+                            if (notices.length) {
+                                const notice = document.createElement('div');
+                                notice.className = 'alert bg-emerald-50 text-emerald-900 border border-emerald-200 mb-5';
+                                notice.innerHTML = '<i class="fa-solid fa-circle-check"></i><span></span>';
+                                notice.querySelector('span').textContent = notices[0].text;
+                                formModalBody.prepend(notice);
+                                setTimeout(() => notice.remove(), 3000)
+                            }
+                            return
+                        }
+                    }
+                    if (notices.length) sessionStorage.setItem('powerpay_messages', JSON.stringify(notices));
+                    formModal.close();
+                    location.reload();
+                    return
+                }
+                const replacement = doc.querySelector('main form')
+                if (replacement) {
+                    if (!replacement.getAttribute('action')) replacement.setAttribute('action', formAction);
+                    formModalBody.replaceChildren(replacement);
+                    prepareModalActions(replacement);
+                    bindModalForm(replacement);
+                    initializePopupForm(replacement)
+                } else {
+                    formModal.close();
+                    location.reload()
+                }
+            } catch (error) {
+                submitter?.classList.remove('loading');
+                if (submitter) submitter.disabled = false;
+                alert('The form could not be submitted. Please try again.')
+            }
+        })
+    }
+
+    function showForm(form, title, action) {
+        const copy = form.cloneNode(true);
+        // Inline popup triggers hide their source form on the page. The modal
+        // clone must be visible even when the source itself carries `hidden`.
+        copy.classList.remove('hidden');
+        if (action) copy.setAttribute('action', action)
+        formModalTitle.textContent = title || copy.querySelector('h2,h3')?.textContent?.trim() || 'Form'
+        copy.querySelector('h2,h3')?.remove();
+        formModalBody.replaceChildren(copy);
+        prepareModalActions(copy);
+        bindModalForm(copy);
+        initializePopupForm(copy);
+        if (!formModal.open) formModal.showModal();
+        copy.querySelector('input:not([type=hidden]),select,textarea')?.focus()
+    }
+    async function openRemoteForm(url, title) {
+        formModalTitle.textContent = title || 'Loading…';
+        formModalBody.innerHTML = '<div class="py-12 text-center"><span class="loading loading-spinner loading-lg text-primary"></span></div>';
+        formModal.showModal()
+        try {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const doc = modalParser.parseFromString(await response.text(), 'text/html'),
+                form = doc.querySelector('main form');
+            if (!form) throw new Error('Form not found');
+            showForm(form, title || doc.querySelector('main h2,main h1')?.textContent?.trim(), url)
+        } catch (error) {
+            formModalBody.innerHTML = '<div class="alert alert-error">The form could not be loaded.</div>'
+        }
+    }
+    document.querySelectorAll('a[data-modal]').forEach(link => link.addEventListener('click', event => {
+        event.preventDefault();
+        openRemoteForm(link.href, link.dataset.modalTitle)
+    }))
+    document.querySelectorAll('main form[data-popup-form]').forEach(form => {
+        const host = form.closest('.card') || form,
+            trigger = document.createElement('button'),
+            actions = document.querySelector('[data-page-actions]');
+        trigger.type = 'button';
+        trigger.className = form.dataset.popupClass || 'btn btn-primary text-white';
+        trigger.innerHTML = form.dataset.popupIcon ? `<i class="${form.dataset.popupIcon}"></i> ${form.dataset.popupLabel}` : form.dataset.popupLabel || 'Open form';
+        actions ? actions.append(trigger) : host.before(trigger);
+        host.classList.add('hidden');
+        trigger.addEventListener('click', () => showForm(form, form.dataset.popupTitle))
+    })
+    const pagePopup = document.querySelector('main form[data-popup-page]');
+    if (pagePopup) {
+        pagePopup.closest('.card')?.classList.add('hidden');
+        showForm(pagePopup, pagePopup.dataset.popupTitle || document.querySelector('main h2')?.textContent?.trim())
+    }
+    document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => formModal.close()))
+</script>
+{% else %}
+{% block public_content %}{% endblock %}
+{% endif %}
+<div class="hidden" aria-hidden="true">
+  {% for message in messages %}
+    <span data-app-message
+          data-type="{{ message.tags|default:'info' }}"
+          data-text="{{ message|escape }}"></span>
+  {% endfor %}
+</div>
+<dialog id="message-modal"
+        class="fixed inset-0 z-[9999] m-0 h-full w-full max-w-none bg-transparent p-0 backdrop:bg-slate-950/40 backdrop:backdrop-blur-sm">
+  <div class="flex min-h-full items-start justify-center px-4 pt-6 sm:justify-end sm:px-6 lg:px-8">
+    <div id="message-box"
+         class="relative w-full max-w-sm overflow-hidden rounded-2xl bg-base-100 shadow-2xl shadow-base-content/10 border border-base-300 opacity-0 -translate-y-3 scale-[.97] transition-all duration-300">
+      <div id="message-accent" class="absolute inset-x-0 top-0 h-1 bg-success"></div>
+      <button id="message-close"
+              type="button"
+              class="absolute right-3 top-3 z-10 btn btn-ghost btn-sm btn-circle">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="p-5 pr-12">
+        <div class="flex items-start gap-3">
+          <div id="message-icon-wrap"
+               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+            <i id="message-icon" class="fa-solid fa-circle-check text-lg"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p id="message-label"
+               class="text-[10px] font-bold uppercase tracking-widest text-success">Success</p>
+            <h3 id="message-title"
+                class="mt-0.5 text-base font-bold text-base-content">Success</h3>
+            <p id="message-text"
+               class="mt-1 text-sm text-base-content/70 leading-relaxed"></p>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 pb-4">
+        <div class="h-1 w-full overflow-hidden rounded-full bg-base-200">
+          <div id="message-progress" class="h-full w-full rounded-full bg-success"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+<script>
+    const messageModal = document.getElementById('message-modal'),
+        messageBox = document.getElementById('message-box'),
+        messageQueue = []
+    const messageStyles = {
+        success: {
+            label: 'Success',
+            accent: 'bg-success',
+            text: 'text-success',
+            box: 'bg-success/10 text-success',
+            bar: 'bg-success',
+            icon: 'fa-solid fa-circle-check text-lg'
+        },
+        error: {
+            label: 'Error',
+            accent: 'bg-error',
+            text: 'text-error',
+            box: 'bg-error/10 text-error',
+            bar: 'bg-error',
+            icon: 'fa-solid fa-circle-exclamation text-lg'
+        },
+        warning: {
+            label: 'Warning',
+            accent: 'bg-warning',
+            text: 'text-warning',
+            box: 'bg-warning/10 text-warning',
+            bar: 'bg-warning',
+            icon: 'fa-solid fa-triangle-exclamation text-lg'
+        },
+        info: {
+            label: 'Info',
+            accent: 'bg-info',
+            text: 'text-info',
+            box: 'bg-info/10 text-info',
+            bar: 'bg-info',
+            icon: 'fa-solid fa-circle-info text-lg'
+        }
+    }
+    let messageTimer
+
+    function closeMessage() {
+        clearTimeout(messageTimer);
+        messageBox.classList.add('opacity-0', '-translate-y-3', 'scale-[.97]');
+        messageBox.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+        setTimeout(() => {
+            if (messageModal.open) messageModal.close();
+            if (messageQueue.length) showNextMessage()
+        }, 260)
+    }
+
+    function showNextMessage() {
+        if (!messageQueue.length) return;
+        const item = messageQueue.shift(),
+            type = (item.type || 'info').split(' ')[0],
+            style = messageStyles[type] || messageStyles.info,
+            progress = document.getElementById('message-progress');
+        document.getElementById('message-label').textContent = style.label;
+        document.getElementById('message-title').textContent = style.label;
+        document.getElementById('message-text').textContent = item.text;
+        document.getElementById('message-accent').className = `absolute inset-x-0 top-0 h-1 ${style.accent}`;
+        document.getElementById('message-label').className = `text-[10px] font-bold uppercase tracking-widest ${style.text}`;
+        document.getElementById('message-icon-wrap').className = `flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.box}`;
+        document.getElementById('message-icon').className = style.icon;
+        progress.className = `h-full w-full rounded-full ${style.bar}`;
+        progress.style.transition = 'none';
+        progress.style.width = '100%';
+        messageModal.showModal();
+        requestAnimationFrame(() => {
+            messageBox.classList.remove('opacity-0', '-translate-y-3', 'scale-[.97]');
+            messageBox.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+            setTimeout(() => {
+                progress.style.transition = 'width 3400ms linear';
+                progress.style.width = '0%'
+            }, 60)
+        });
+        messageTimer = setTimeout(closeMessage, 3500)
+    }
+    document.querySelectorAll('[data-app-message]').forEach(item => messageQueue.push({
+        type: item.dataset.type,
+        text: item.dataset.text
+    }));
+    try {
+        const carried = JSON.parse(sessionStorage.getItem('powerpay_messages') || '[]');
+        messageQueue.push(...carried);
+        sessionStorage.removeItem('powerpay_messages')
+    } catch (error) {}
+    document.getElementById('message-close').addEventListener('click', closeMessage);
+    messageModal.addEventListener('click', event => {
+        if (event.target === messageModal) closeMessage()
+    });
+    showNextMessage()
+</script>
+<script>
+    function installPasswordToggles(root = document) {
+        root.querySelectorAll('input[type="password"]:not([data-password-toggle-ready])').forEach(input => {
+            input.dataset.passwordToggleReady = 'true';
+            const wrap = document.createElement('div');
+            wrap.className = 'password-field-wrap';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.append(input);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'password-toggle';
+            button.setAttribute('aria-label', 'Show password');
+            button.setAttribute('aria-pressed', 'false');
+            button.innerHTML = '<i class="fa-regular fa-eye"></i>';
+            button.addEventListener('click', () => {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                button.setAttribute('aria-pressed', String(show));
+                button.innerHTML = show ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+                input.focus({
+                    preventScroll: true
+                })
+            });
+            wrap.append(button)
+        })
+    }
+    installPasswordToggles();
+    new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node.nodeType === 1) installPasswordToggles(node)
+    }))).observe(document.body, {
+        childList: true,
+        subtree: true
+    })
+</script>
+</body>
 </html>

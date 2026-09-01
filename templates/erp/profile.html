@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block page_title %}
+  My profile
+{% endblock %}
+{% block content %}
+  <div class="max-w-5xl mx-auto space-y-6">
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-orange-500 p-6 sm:p-8 text-white shadow-xl">
+      <div class="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10"></div>
+      <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-5">
+          <div class="grid h-20 w-20 shrink-0 place-items-center rounded-2xl border border-white/30 bg-white/20 text-2xl font-bold shadow-lg backdrop-blur-sm">
+            {{ user.first_name.0|default:'U' }}{{ user.last_name.0 }}
+          </div>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[.2em] text-white/70">Employee profile</p>
+            <h2 class="mt-1 text-3xl font-bold">{{ user.get_full_name|default:user.username }}</h2>
+            <p class="mt-1 text-white/80">{{ employee_profile.position|default:employee_profile.get_role_display }}</p>
+          </div>
+        </div>
+        <div data-page-actions class="flex justify-end"></div>
+      </div>
+    </section>
+    <div class="grid gap-6 lg:grid-cols-3">
+      <section class="card bg-base-100 shadow-sm lg:col-span-2">
+        <div class="card-body">
+          <div class="mb-2 flex items-center gap-3">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><i class="fa-regular fa-address-card"></i></span>
+            <div>
+              <h3 class="font-bold">Personal and employment information</h3>
+              <p class="text-xs opacity-55">Contact an organization administrator to change locked fields.</p>
+            </div>
+          </div>
+          <dl class="grid gap-x-8 sm:grid-cols-2">
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">First name</dt>
+              <dd class="mt-1 font-medium">
+                {{ user.first_name|default:'Not provided' }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Last name</dt>
+              <dd class="mt-1 font-medium">
+                {{ user.last_name|default:'Not provided' }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Email address</dt>
+              <dd class="mt-1 break-all font-medium">
+                {{ user.email }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Phone number</dt>
+              <dd class="mt-1 font-medium">
+                {{ employee_profile.phone|default:'Not provided' }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Employee ID</dt>
+              <dd class="mt-1 font-mono font-semibold text-emerald-700">
+                {{ employee_profile.employee_id|default:'Not assigned' }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Role</dt>
+              <dd class="mt-1">
+                <span class="badge badge-success text-white">{{ employee_profile.get_role_display }}</span>
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Position</dt>
+              <dd class="mt-1 font-medium">
+                {{ employee_profile.position|default:'Not assigned' }}
+              </dd>
+            </div>
+            <div class="border-b border-base-200 py-4">
+              <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Hire date</dt>
+              <dd class="mt-1 font-medium">
+                {{ employee_profile.hire_date|date:'j F Y'|default:'Not provided' }}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <aside class="space-y-6">
+        <section class="card bg-base-100 shadow-sm">
+          <div class="card-body">
+            <h3 class="flex items-center gap-2 font-bold"><i class="fa-solid fa-sitemap text-orange-500"></i> Organization</h3>
+            <dl class="mt-2 space-y-4">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Company</dt>
+                <dd class="mt-1 font-medium">
+                  {{ employee_profile.organization.name }}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Department</dt>
+                <dd class="mt-1 font-medium">
+                  {{ employee_profile.department.name|default:'Not assigned' }}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide opacity-50">Manager</dt>
+                <dd class="mt-1 font-medium">
+                  {{ employee_profile.manager|default:'No manager assigned' }}
+                </dd>
+                {% if employee_profile.manager %}<p class="mt-1 text-xs opacity-55">{{ employee_profile.manager.position }}</p>{% endif %}
+              </div>
+            </dl>
+          </div>
+        </section>
+        <section class="rounded-2xl border border-orange-200 bg-orange-50 p-5 text-sm text-orange-950">
+          <div class="flex gap-3">
+            <i class="fa-solid fa-lock mt-0.5 text-orange-500"></i>
+            <p><strong>Protected employee record.</strong> You may edit only your first and last name. Email, role, employee ID, department, manager, position, phone, and hire date are read-only.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+    <form method="post"
+          class="hidden"
+          data-popup-form
+          data-popup-label="Edit name"
+          data-popup-icon="fa-solid fa-pen"
+          data-popup-class="btn border-white/30 bg-white text-emerald-700 hover:border-white hover:bg-white hover:text-emerald-800"
+          data-popup-title="Edit your name">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-error text-white mb-3">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}
+        <label class="form-control mb-3">
+          <span class="label"><span class="label-text">{{ field.label }}</span></span>
+          {{ field }}
+          {{ field.errors }}
+        </label>
+      {% endfor %}
+      <p class="mt-2 text-xs opacity-60">Only these two name fields can be changed from your profile.</p>
+      <div class="card-actions justify-end mt-5">
+        <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary text-white">Save changes</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

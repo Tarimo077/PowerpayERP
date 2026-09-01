@@ -3,17 +3,24 @@
   Templates
 {% endblock %}
 {% block content %}
-  <div class="flex flex-wrap justify-between items-center gap-4 mb-6"><div><h2 class="text-2xl font-bold">Timesheet templates</h2><p class="opacity-60 mt-1">Manage organization and department export formats.</p></div><div data-page-actions class="flex gap-3"></div></div>
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <div>
+      <h2 class="text-2xl font-bold">Timesheet templates</h2>
+      <p class="opacity-60 mt-1">Manage organization and department export formats.</p>
+    </div>
+    <div data-page-actions class="flex gap-3"></div>
+  </div>
   <div class="grid lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
       {% for t in templates %}
         <div class="card bg-base-100 mb-3">
           <div class="card-body flex-row justify-between">
             <div>
-              <h3 class="font-bold">{{ t.name }}</h3><p class="text-sm opacity-60">
+              <h3 class="font-bold">{{ t.name }}</h3>
+              <p class="text-sm opacity-60">
                 {{ t.department|default:'Organization-wide' }}{% if t.is_default %} · Default{% endif %}
               </p>
-            </div><a class="btn btn-ghost" href="{{ t.file.url }}">Download</a>
+            </div><a class="btn btn-ghost" href="{% url 'template_download' t.pk %}">Download</a>
           </div>
         </div>
       {% empty %}
@@ -21,7 +28,13 @@
       {% endfor %}
     </div>
     <div class="card bg-base-100 h-fit">
-      <form method="post" enctype="multipart/form-data" class="card-body" data-popup-form data-allow-add-another data-popup-label="Upload template" data-popup-title="Upload template">
+      <form method="post"
+            enctype="multipart/form-data"
+            class="card-body"
+            data-popup-form
+            data-allow-add-another
+            data-popup-label="Upload template"
+            data-popup-title="Upload template">
         {% csrf_token %}<h3 class="card-title">Upload template</h3>{{ form.as_p }}<button class="btn btn-primary">Upload</button>
       </form>
     </div>

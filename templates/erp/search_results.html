@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block page_title %}Search{% endblock %}
+{% block content %}
+  <div class="space-y-6">
+    <div>
+      <h2 class="text-2xl font-bold">Search results</h2>
+      <p class="opacity-60">{{ result_count }} result{{ result_count|pluralize }} for “{{ query }}”.</p>
+    </div>
+    {% for task in tasks %}
+      {% if forloop.first %}<section class="card bg-base-100"><div class="card-body"><h3 class="card-title">Tasks</h3>{% endif %}
+      <a class="rounded-xl border border-base-300 p-3 hover:bg-emerald-50"
+         href="{% url 'task_detail' task.pk %}"><b>{{ task.title }}</b><span class="block text-xs opacity-60">{{ task.assigned_to }} · {{ task.get_status_display }}</span></a>
+      {% if forloop.last %}
+        </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+    {% for voucher in vouchers %}
+      {% if forloop.first %}<section class="card bg-base-100"><div class="card-body"><h3 class="card-title">Payment vouchers</h3>{% endif %}
+      <a class="rounded-xl border border-base-300 p-3 hover:bg-orange-50"
+         href="{% url 'payment_voucher_detail' voucher.pk %}"><b>{{ voucher.number }}</b><span class="block text-xs opacity-60">{{ voucher.payee }} · {{ voucher.get_status_display }}</span></a>
+      {% if forloop.last %}
+        </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+    {% for item in item_requests %}
+      {% if forloop.first %}<section class="card bg-base-100"><div class="card-body"><h3 class="card-title">Item requests</h3>{% endif %}
+      <a class="rounded-xl border border-base-300 p-3 hover:bg-orange-50"
+         href="{% url 'item_request_detail' item.pk %}"><b>{{ item.number }}</b><span class="block text-xs opacity-60">{{ item.purpose }} · {{ item.get_status_display }}</span></a>
+      {% if forloop.last %}
+        </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+    {% for document in documents %}
+      {% if forloop.first %}<section class="card bg-base-100"><div class="card-body"><h3 class="card-title">Documents</h3>{% endif %}
+      <a class="rounded-xl border border-base-300 p-3 hover:bg-emerald-50"
+         href="{% url 'document_download' document.pk %}"><b>{{ document.title }}</b><span class="block text-xs opacity-60">{{ document.category|default:'General' }}</span></a>
+      {% if forloop.last %}
+        </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+    {% for employee in employees %}
+      {% if forloop.first %}<section class="card bg-base-100"><div class="card-body"><h3 class="card-title">Employees</h3>{% endif %}
+      <div class="rounded-xl border border-base-300 p-3"><b>{{ employee }}</b><span class="block text-xs opacity-60">{{ employee.employee_id }} · {{ employee.department|default:'No department' }}</span></div>
+      {% if forloop.last %}
+        </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+    {% if query and not result_count %}<div class="rounded-2xl border border-dashed border-base-300 bg-base-100 p-12 text-center opacity-60">No accessible records matched your search.</div>{% endif %}
+  </div>
+{% endblock %}

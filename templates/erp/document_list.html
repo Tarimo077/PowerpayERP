@@ -5,8 +5,12 @@
 {% block content %}
   <div class="flex justify-between mb-6">
     <div>
-      <h2 class="text-2xl font-bold">Document library</h2><p class="opacity-60">Secure, searchable organizational files.</p>
-    </div><a href="{% url 'document_upload' %}" class="btn btn-primary" data-modal data-modal-title="Upload document">↑ Upload</a>
+      <h2 class="text-2xl font-bold">Document library</h2>
+      <p class="opacity-60">Secure, searchable organizational files.</p>
+    </div><a href="{% url 'document_upload' %}"
+   class="btn btn-primary"
+   data-modal
+   data-modal-title="Upload document">↑ Upload</a>
   </div>
   <div class="card bg-base-100">
     <table class="table">
@@ -29,7 +33,8 @@
             </td>
             <td>{{ d.created_at|date:'M d, Y' }}</td>
             <td>
-              <a class="btn btn-sm btn-ghost" href="{{ d.file.url }}" download>Download</a>
+              <a class="btn btn-sm btn-ghost"
+                 href="{% url 'document_download' d.pk %}">Download</a>
             </td>
           </tr>
         {% empty %}

@@ -1,10 +1,142 @@
 {% extends 'base.html' %}
 {% block page_title %}{{ thread.chat_title }}{% endblock %}
 {% block content %}
-<div class="flex flex-wrap items-center justify-between gap-4 mb-5"><div class="flex items-center gap-3"><a href="{% url 'chats' %}" class="btn btn-ghost btn-circle"><i class="fa-solid fa-arrow-left"></i></a><span class="w-12 h-12 rounded-2xl {% if thread.kind == 'group' %}bg-orange-100 text-orange-600{% else %}bg-emerald-100 text-emerald-700{% endif %} grid place-items-center font-bold">{% if thread.kind == 'group' %}<i class="fa-solid fa-users"></i>{% else %}{{ thread.chat_title|slice:':2'|upper }}{% endif %}</span><div><h2 class="text-xl font-bold">{{ thread.chat_title }}</h2><p id="chat-subtitle" class="text-xs opacity-60">{% if thread.kind == 'group' %}{{ chat_members|length }} member{{ chat_members|length|pluralize }}{% else %}Direct conversation{% endif %}</p></div></div><div class="flex flex-wrap gap-3">{% if thread.kind == 'group' and membership.is_admin %}<a href="{% url 'chat_invite' thread.pk %}" class="btn btn-primary text-white" data-modal data-modal-title="Invite group members"><i class="fa-solid fa-user-plus"></i> Invite</a>{% endif %}{% if thread.kind == 'group' %}<button class="btn btn-outline btn-error" onclick="document.getElementById('leave-chat').showModal()">Leave group</button>{% endif %}</div></div>
-<div class="grid xl:grid-cols-4 gap-5"><section class="xl:col-span-3 rounded-2xl border border-base-300 bg-base-100 overflow-hidden flex flex-col h-[calc(100vh-12rem)] min-h-[560px]"><div id="message-list" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4" aria-live="polite">{% for message in chat_messages %}<div class="message-row flex gap-3 {% if message.sender_id == current_profile.id %}justify-end{% endif %}" data-message-id="{{ message.pk }}">{% if message.sender_id != current_profile.id %}<span class="w-9 h-9 shrink-0 rounded-xl bg-base-200 grid place-items-center text-xs font-bold">{{ message.sender.user.first_name.0|default:message.sender.user.username.0 }}{{ message.sender.user.last_name.0 }}</span>{% endif %}<div class="max-w-[78%]"><div class="rounded-2xl px-4 py-3 {% if message.sender_id == current_profile.id %}bg-emerald-600 text-white rounded-br-sm{% else %}bg-orange-500 text-white rounded-bl-sm{% endif %}">{% if message.sender_id != current_profile.id %}<div class="text-xs font-bold mb-1 text-white/80">{{ message.sender }}</div>{% endif %}{% if message.body %}<p class="whitespace-pre-wrap break-words">{{ message.body }}</p>{% endif %}{% if message.attachment %}<a href="{% url 'chat_attachment' message.pk %}" class="mt-2 flex items-center gap-2 underline text-sm" target="_blank"><i class="fa-solid fa-paperclip"></i>{{ message.attachment.name|cut:'chat_attachments/' }}</a>{% endif %}</div><div class="text-[10px] opacity-40 mt-1 {% if message.sender_id == current_profile.id %}text-right{% endif %}">{{ message.created_at|date:'d M Y, H:i' }}</div></div></div>{% empty %}<div id="empty-chat" class="h-full grid place-items-center text-center"><div><i class="fa-regular fa-comments text-5xl text-emerald-600"></i><h3 class="font-bold mt-3">Start the conversation</h3><p class="text-sm opacity-50">Messages are visible only to members of this chat.</p></div></div>{% endfor %}</div><form id="message-form" method="post" enctype="multipart/form-data" class="border-t border-base-300 bg-base-100 p-3 sm:p-4">{% csrf_token %}<div id="message-error" class="hidden text-sm text-error mb-2"></div><div class="flex items-end gap-2"><label class="btn btn-ghost btn-circle shrink-0" title="Attach a file"><i class="fa-solid fa-paperclip"></i>{{ form.attachment }}</label><div class="flex-1">{{ form.body }}</div><button class="btn btn-primary text-white btn-circle shrink-0" aria-label="Send message"><i class="fa-solid fa-paper-plane"></i></button></div></form></section><aside class="card bg-base-100 border border-base-300 h-fit"><div class="card-body"><h3 class="card-title text-base">Members</h3><div id="chat-members" class="space-y-3">{% for item in chat_members %}<div class="flex items-center gap-3" data-member-id="{{ item.profile_id }}"><span class="relative w-9 h-9 rounded-xl bg-base-200 grid place-items-center text-xs font-bold">{{ item.profile.user.first_name.0|default:item.profile.user.username.0 }}{{ item.profile.user.last_name.0 }}<span class="presence-dot absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full {% if item.presence_data.online %}bg-emerald-500{% else %}bg-slate-300{% endif %} border-2 border-white"></span></span><div class="min-w-0"><b class="block text-sm truncate">{{ item.profile }}{% if item.is_admin %} <span class="text-[9px] text-orange-600">ADMIN</span>{% endif %}</b><span class="presence-label text-[11px] {% if item.presence_data.online %}text-emerald-600{% else %}opacity-40{% endif %}">{{ item.presence_data.status }}</span></div></div>{% endfor %}</div></div></aside></div>
-{% if thread.kind == 'group' %}<dialog id="leave-chat" class="modal"><div class="modal-box"><h3 class="font-bold text-lg">Leave {{ thread.name }}?</h3><p class="py-4 opacity-60">You will stop receiving messages from this group. An administrator can invite you again.</p><div class="modal-action gap-3"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><form method="post" action="{% url 'chat_leave' thread.pk %}">{% csrf_token %}<button class="btn btn-error text-white">Leave group</button></form></div></div></dialog>{% endif %}
-<script>
-(()=>{const list=document.getElementById('message-list'),form=document.getElementById('message-form'),body=form.querySelector('textarea'),error=document.getElementById('message-error'),feedUrl='{% url "chat_message_feed" thread.pk %}';let latest=Math.max(0,...[...list.querySelectorAll('[data-message-id]')].map(row=>Number(row.dataset.messageId))),polling=false;function appendMessage(message){if(list.querySelector(`[data-message-id="${message.id}"]`))return;document.getElementById('empty-chat')?.remove();const row=document.createElement('div');row.className=`message-row flex gap-3 ${message.mine?'justify-end':''}`;row.dataset.messageId=message.id;if(!message.mine){const avatar=document.createElement('span');avatar.className='w-9 h-9 shrink-0 rounded-xl bg-base-200 grid place-items-center text-xs font-bold';avatar.textContent=message.initials;row.append(avatar)}const wrap=document.createElement('div');wrap.className='max-w-[78%]';const bubble=document.createElement('div');bubble.className=`rounded-2xl px-4 py-3 ${message.mine?'bg-emerald-600 text-white rounded-br-sm':'bg-orange-500 text-white rounded-bl-sm'}`;if(!message.mine){const sender=document.createElement('div');sender.className='text-xs font-bold mb-1 text-white/80';sender.textContent=message.sender;bubble.append(sender)}if(message.body){const text=document.createElement('p');text.className='whitespace-pre-wrap break-words';text.textContent=message.body;bubble.append(text)}if(message.attachment){const link=document.createElement('a');link.href=message.attachment;link.target='_blank';link.className='mt-2 flex items-center gap-2 underline text-sm';link.innerHTML='<i class="fa-solid fa-paperclip"></i>';link.append(document.createTextNode(message.attachment_name));bubble.append(link)}const stamp=document.createElement('div');stamp.className=`text-[10px] opacity-40 mt-1 ${message.mine?'text-right':''}`;stamp.textContent=`${message.date}, ${message.time}`;wrap.append(bubble,stamp);row.append(wrap);list.append(row);latest=Math.max(latest,message.id);list.scrollTop=list.scrollHeight}async function poll(){if(polling||document.hidden)return;polling=true;try{const response=await fetch(`${feedUrl}?after=${latest}`,{headers:{'X-Requested-With':'XMLHttpRequest'}}),data=await response.json();data.messages.forEach(appendMessage);data.members.forEach(member=>{const row=document.querySelector(`[data-member-id="${member.id}"]`);if(!row)return;const dot=row.querySelector('.presence-dot'),label=row.querySelector('.presence-label');dot.classList.toggle('bg-emerald-500',member.online);dot.classList.toggle('bg-slate-300',!member.online);label.textContent=member.status;label.classList.toggle('text-emerald-600',member.online);label.classList.toggle('opacity-40',!member.online)})}catch(e){}finally{polling=false}}form.addEventListener('submit',async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"],button:not([type])');submit.disabled=true;error.classList.add('hidden');try{const response=await fetch(location.href,{method:'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'}}),contentType=response.headers.get('content-type')||'';if(!response.ok||!contentType.includes('application/json'))throw new Error('Enter a message or choose an attachment.');const data=await response.json();appendMessage(data.message);form.reset();body.focus()}catch(e){error.textContent=e.message;error.classList.remove('hidden')}finally{submit.disabled=false}});body.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();form.requestSubmit()}});list.scrollTop=list.scrollHeight;setInterval(poll,3000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});})();
-</script>
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-5"><div class="flex items-center gap-3"><a href="{% url 'chats' %}" class="btn btn-ghost btn-circle"><i class="fa-solid fa-arrow-left"></i></a><span class="w-12 h-12 rounded-2xl {% if thread.kind == 'group' %}bg-orange-100 text-orange-600{% else %}bg-emerald-100 text-emerald-700{% endif %} grid place-items-center font-bold">{% if thread.kind == 'group' %}<i class="fa-solid fa-users"></i>{% else %}{{ thread.chat_title|slice:':2'|upper }}{% endif %}</span><div><h2 class="text-xl font-bold">{{ thread.chat_title }}</h2><p id="chat-subtitle" class="text-xs opacity-60">{% if thread.kind == 'group' %}{{ chat_members|length }} member{{ chat_members|length|pluralize }}{% else %}Direct conversation{% endif %}</p></div></div><div class="flex flex-wrap gap-3">{% if thread.kind == 'group' and membership.is_admin %}<a href="{% url 'chat_invite' thread.pk %}"
+   class="btn btn-primary text-white"
+   data-modal
+   data-modal-title="Invite group members"><i class="fa-solid fa-user-plus"></i> Invite</a>{% endif %}{% if thread.kind == 'group' %}<button class="btn btn-outline btn-error"
+        onclick="document.getElementById('leave-chat').showModal()">Leave group</button>{% endif %}</div></div>
+  <div class="grid xl:grid-cols-4 gap-5"><section class="xl:col-span-3 rounded-2xl border border-base-300 bg-base-100 overflow-hidden flex flex-col h-[calc(100vh-12rem)] min-h-[560px]"><div id="message-list"
+     class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+     aria-live="polite">{% for message in chat_messages %}<div class="message-row flex gap-3 {% if message.sender_id == current_profile.id %}justify-end{% endif %}"
+     data-message-id="{{ message.pk }}">{% if message.sender_id != current_profile.id %}<span class="w-9 h-9 shrink-0 rounded-xl bg-base-200 grid place-items-center text-xs font-bold">{{ message.sender.user.first_name.0|default:message.sender.user.username.0 }}{{ message.sender.user.last_name.0 }}</span>{% endif %}<div class="max-w-[78%]"><div class="rounded-2xl px-4 py-3 {% if message.sender_id == current_profile.id %}bg-emerald-600 text-white rounded-br-sm{% else %}bg-orange-500 text-white rounded-bl-sm{% endif %}">{% if message.sender_id != current_profile.id %}<div class="text-xs font-bold mb-1 text-white/80">{{ message.sender }}</div>{% endif %}{% if message.body %}<p class="whitespace-pre-wrap break-words">{{ message.body }}</p>{% endif %}{% if message.attachment %}<a href="{% url 'chat_attachment' message.pk %}"
+   class="mt-2 flex items-center gap-2 underline text-sm"
+   target="_blank"><i class="fa-solid fa-paperclip"></i>{{ message.attachment.name|cut:'chat_attachments/' }}</a>{% endif %}</div><div class="text-[10px] opacity-40 mt-1 {% if message.sender_id == current_profile.id %}text-right{% endif %}">{{ message.created_at|date:'d M Y, H:i' }}</div></div></div>{% empty %}<div id="empty-chat" class="h-full grid place-items-center text-center"><div><i class="fa-regular fa-comments text-5xl text-emerald-600"></i><h3 class="font-bold mt-3">Start the conversation</h3><p class="text-sm opacity-50">Messages are visible only to members of this chat.</p></div></div>{% endfor %}</div><form id="message-form"
+      method="post"
+      enctype="multipart/form-data"
+      class="border-t border-base-300 bg-base-100 p-3 sm:p-4">{% csrf_token %}<div id="message-error" class="hidden text-sm text-error mb-2"></div><div class="flex items-end gap-2"><label class="btn btn-ghost btn-circle shrink-0" title="Attach a file"><i class="fa-solid fa-paperclip"></i>{{ form.attachment }}</label><div class="flex-1">{{ form.body }}</div><button class="btn btn-primary text-white btn-circle shrink-0"
+        aria-label="Send message"><i class="fa-solid fa-paper-plane"></i></button></div></form></section><aside class="card bg-base-100 border border-base-300 h-fit"><div class="card-body"><h3 class="card-title text-base">Members</h3><div id="chat-members" class="space-y-3">{% for item in chat_members %}<div class="flex items-center gap-3"
+     data-member-id="{{ item.profile_id }}"><span class="relative w-9 h-9 rounded-xl bg-base-200 grid place-items-center text-xs font-bold">{{ item.profile.user.first_name.0|default:item.profile.user.username.0 }}{{ item.profile.user.last_name.0 }}<span class="presence-dot absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full {% if item.presence_data.online %}bg-emerald-500{% else %}bg-slate-300{% endif %} border-2 border-white"></span></span><div class="min-w-0"><b class="block text-sm truncate">{{ item.profile }}{% if item.is_admin %} <span class="text-[9px] text-orange-600">ADMIN</span>{% endif %}</b><span class="presence-label text-[11px] {% if item.presence_data.online %}text-emerald-600{% else %}opacity-40{% endif %}">{{ item.presence_data.status }}</span></div></div>{% endfor %}</div></div></aside></div>
+  {% if thread.kind == 'group' %}<dialog id="leave-chat" class="modal"><div class="modal-box"><h3 class="font-bold text-lg">Leave {{ thread.name }}?</h3><p class="py-4 opacity-60">You will stop receiving messages from this group. An administrator can invite you again.</p><div class="modal-action gap-3"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><form method="post" action="{% url 'chat_leave' thread.pk %}">{% csrf_token %}<button class="btn btn-error text-white">Leave group</button></form></div></div></dialog>{% endif %}
+  <script>
+      (() => {
+          const list = document.getElementById('message-list'),
+              form = document.getElementById('message-form'),
+              body = form.querySelector('textarea'),
+              error = document.getElementById('message-error'),
+              feedUrl = '{% url "chat_message_feed" thread.pk %}';
+          let latest = Math.max(0, ...[...list.querySelectorAll('[data-message-id]')].map(row => Number(row.dataset.messageId))),
+              polling = false;
+
+          function appendMessage(message) {
+              if (list.querySelector(`[data-message-id="${message.id}"]`)) return;
+              document.getElementById('empty-chat')?.remove();
+              const row = document.createElement('div');
+              row.className = `message-row flex gap-3 ${message.mine?'justify-end':''}`;
+              row.dataset.messageId = message.id;
+              if (!message.mine) {
+                  const avatar = document.createElement('span');
+                  avatar.className = 'w-9 h-9 shrink-0 rounded-xl bg-base-200 grid place-items-center text-xs font-bold';
+                  avatar.textContent = message.initials;
+                  row.append(avatar)
+              }
+              const wrap = document.createElement('div');
+              wrap.className = 'max-w-[78%]';
+              const bubble = document.createElement('div');
+              bubble.className = `rounded-2xl px-4 py-3 ${message.mine?'bg-emerald-600 text-white rounded-br-sm':'bg-orange-500 text-white rounded-bl-sm'}`;
+              if (!message.mine) {
+                  const sender = document.createElement('div');
+                  sender.className = 'text-xs font-bold mb-1 text-white/80';
+                  sender.textContent = message.sender;
+                  bubble.append(sender)
+              }
+              if (message.body) {
+                  const text = document.createElement('p');
+                  text.className = 'whitespace-pre-wrap break-words';
+                  text.textContent = message.body;
+                  bubble.append(text)
+              }
+              if (message.attachment) {
+                  const link = document.createElement('a');
+                  link.href = message.attachment;
+                  link.target = '_blank';
+                  link.className = 'mt-2 flex items-center gap-2 underline text-sm';
+                  link.innerHTML = '<i class="fa-solid fa-paperclip"></i>';
+                  link.append(document.createTextNode(message.attachment_name));
+                  bubble.append(link)
+              }
+              const stamp = document.createElement('div');
+              stamp.className = `text-[10px] opacity-40 mt-1 ${message.mine?'text-right':''}`;
+              stamp.textContent = `${message.date}, ${message.time}`;
+              wrap.append(bubble, stamp);
+              row.append(wrap);
+              list.append(row);
+              latest = Math.max(latest, message.id);
+              list.scrollTop = list.scrollHeight
+          }
+          async function poll() {
+              if (polling || document.hidden) return;
+              polling = true;
+              try {
+                  const response = await fetch(`${feedUrl}?after=${latest}`, {
+                          headers: {
+                              'X-Requested-With': 'XMLHttpRequest'
+                          }
+                      }),
+                      data = await response.json();
+                  data.messages.forEach(appendMessage);
+                  data.members.forEach(member => {
+                      const row = document.querySelector(`[data-member-id="${member.id}"]`);
+                      if (!row) return;
+                      const dot = row.querySelector('.presence-dot'),
+                          label = row.querySelector('.presence-label');
+                      dot.classList.toggle('bg-emerald-500', member.online);
+                      dot.classList.toggle('bg-slate-300', !member.online);
+                      label.textContent = member.status;
+                      label.classList.toggle('text-emerald-600', member.online);
+                      label.classList.toggle('opacity-40', !member.online)
+                  })
+              } catch (e) {} finally {
+                  polling = false
+              }
+          }
+          form.addEventListener('submit', async event => {
+              event.preventDefault();
+              const submit = form.querySelector('button[type="submit"],button:not([type])');
+              submit.disabled = true;
+              error.classList.add('hidden');
+              try {
+                  const response = await fetch(location.href, {
+                          method: 'POST',
+                          body: new FormData(form),
+                          headers: {
+                              'X-Requested-With': 'XMLHttpRequest'
+                          }
+                      }),
+                      contentType = response.headers.get('content-type') || '';
+                  if (!response.ok || !contentType.includes('application/json')) throw new Error('Enter a message or choose an attachment.');
+                  const data = await response.json();
+                  appendMessage(data.message);
+                  form.reset();
+                  body.focus()
+              } catch (e) {
+                  error.textContent = e.message;
+                  error.classList.remove('hidden')
+              } finally {
+                  submit.disabled = false
+              }
+          });
+          body.addEventListener('keydown', event => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  form.requestSubmit()
+              }
+          });
+          list.scrollTop = list.scrollHeight;
+          setInterval(poll, 3000);
+          document.addEventListener('visibilitychange', () => {
+              if (!document.hidden) poll()
+          });
+      })();
+  </script>
 {% endblock %}

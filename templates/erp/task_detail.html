@@ -3,39 +3,56 @@
   Task details
 {% endblock %}
 {% block content %}
-  <div class="flex flex-wrap justify-between items-start gap-4 mb-6"><div><h2 class="text-2xl font-bold">{{ task.title }}</h2><p class="text-sm opacity-55 mt-1">Assigned to {{ task.assigned_to }} · Due {{ task.due_date }}</p></div>{% if can_change_status %}<a href="{% url 'task_status' task.pk %}" data-modal data-modal-title="Change task status" class="btn btn-primary text-white"><i class="fa-solid fa-arrows-rotate"></i> Change status</a>{% endif %}</div>
+  <div class="flex flex-wrap justify-between items-start gap-4 mb-6"><div><h2 class="text-2xl font-bold">{{ task.title }}</h2><p class="text-sm opacity-55 mt-1">Assigned to {{ task.assigned_to }} · Due {{ task.due_date }}</p></div>{% if can_change_status %}<a href="{% url 'task_status' task.pk %}"
+   data-modal
+   data-modal-title="Change task status"
+   class="btn btn-primary text-white"><i class="fa-solid fa-arrows-rotate"></i> Change status</a>{% endif %}</div>
   <div class="grid lg:grid-cols-3 gap-6">
     <div class="card bg-base-100 lg:col-span-2">
       <div class="card-body">
         <div class="flex justify-between">
           <span class="badge">{{ task.get_priority_display }} priority</span><span class="badge badge-primary">{{ task.get_status_display }}</span>
-        </div><p class="whitespace-pre-line opacity-80 mt-4">{{ task.description|default:'No description provided.' }}</p>
+        </div>
+        <p class="whitespace-pre-line opacity-80 mt-4">{{ task.description|default:'No description provided.' }}</p>
         {% if task.instructions %}
           <div class="bg-base-200 rounded-xl p-4 mt-3">
-            <h3 class="font-bold">Instructions</h3><p class="whitespace-pre-line">{{ task.instructions }}</p>
+            <h3 class="font-bold">Instructions</h3>
+            <p class="whitespace-pre-line">{{ task.instructions }}</p>
           </div>
         {% endif %}
         {% if task.attachment %}
-          <a class="btn btn-outline mt-4" href="{{ task.attachment.url }}">Download attachment</a>
+          <a class="btn btn-outline mt-4"
+             href="{% url 'task_attachment' task.pk %}">Download attachment</a>
         {% endif %}
         {% if task.payment_voucher_approval %}
-          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 mt-4"><div class="text-xs font-bold uppercase tracking-wider text-orange-600">Approval task</div><p class="font-semibold mt-1">This task was created for payment voucher {{ task.payment_voucher_approval.number }}.</p><a href="{% url 'payment_voucher_detail' task.payment_voucher_approval.pk %}" class="btn btn-primary text-white btn-sm mt-3">Review payment voucher</a></div>
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 mt-4"><div class="text-xs font-bold uppercase tracking-wider text-orange-600">Approval task</div><p class="font-semibold mt-1">This task was created for payment voucher {{ task.payment_voucher_approval.number }}.</p><a href="{% url 'payment_voucher_detail' task.payment_voucher_approval.pk %}"
+   class="btn btn-primary text-white btn-sm mt-3">Review payment voucher</a></div>
         {% endif %}
       </div>
     </div>
     <div class="space-y-5">
       <div class="card bg-base-100">
         <div class="card-body">
-          <h3 class="card-title">Details</h3><div>
-            <small class="opacity-60">Assigned to</small><p class="font-semibold">{{ task.assigned_to }}</p>
+          <h3 class="card-title">Details</h3>
+          <div>
+            <small class="opacity-60">Assigned to</small>
+            <p class="font-semibold">{{ task.assigned_to }}</p>
           </div>
           <div>
-            <small class="opacity-60">Due date</small><p class="font-semibold">{{ task.due_date }}</p>
+            <small class="opacity-60">Due date</small>
+            <p class="font-semibold">{{ task.due_date }}</p>
           </div>
-          <div><small class="opacity-60">Actual work started</small><p class="font-semibold">{{ task.actual_started_at|date:'d M Y, H:i'|default:'Not started' }}</p></div>
-          <div><small class="opacity-60">Actual work completed</small><p class="font-semibold">{{ task.actual_completed_at|date:'d M Y, H:i'|default:'Not completed' }}</p></div>
           <div>
-            <small class="opacity-60">Department</small><p>{{ task.department|default:'General' }}</p>
+            <small class="opacity-60">Actual work started</small>
+            <p class="font-semibold">{{ task.actual_started_at|date:'d M Y, H:i'|default:'Not started' }}</p>
+          </div>
+          <div>
+            <small class="opacity-60">Actual work completed</small>
+            <p class="font-semibold">{{ task.actual_completed_at|date:'d M Y, H:i'|default:'Not completed' }}</p>
+          </div>
+          <div>
+            <small class="opacity-60">Department</small>
+            <p>{{ task.department|default:'General' }}</p>
           </div>
         </div>
       </div>

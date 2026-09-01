@@ -5,10 +5,14 @@
 {% block content %}
   <div class="flex flex-wrap justify-between gap-3 mb-7">
     <div>
-      <h2 class="text-2xl font-bold">Good day, {{ user.first_name|default:user.username }}</h2><p class="text-base-content/60">Here’s what needs your attention today.</p>
+      <h2 class="text-2xl font-bold">Good day, {{ user.first_name|default:user.username }}</h2>
+      <p class="text-base-content/60">Here’s what needs your attention today.</p>
     </div>
     {% if not super_view %}
-      <a href="{% url 'task_create' %}" class="btn btn-primary" data-modal data-modal-title="Assign task">+ Assign task</a>
+      <a href="{% url 'task_create' %}"
+         class="btn btn-primary"
+         data-modal
+         data-modal-title="Assign task">+ Assign task</a>
     {% endif %}
   </div>
   <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
@@ -20,34 +24,73 @@
     {% endfor %}
   </div>
   {% if not super_view %}
-    {% if current_profile.role == 'manager' %}<div role="tablist" class="tabs tabs-boxed bg-base-100 border border-base-300 p-1 mb-4 w-fit"><button type="button" class="tab tab-active" data-calendar-tab="personal"><i class="fa-solid fa-user mr-2"></i>Personal</button><button type="button" class="tab" data-calendar-tab="team"><i class="fa-solid fa-people-group mr-2"></i>Team</button></div>{% endif %}
-    <section class="card bg-base-100 border border-base-300 mb-8 overflow-hidden" data-calendar-panel="personal">
+    {% if current_profile.role == 'manager' %}<div role="tablist"
+     class="tabs tabs-boxed bg-base-100 border border-base-300 p-1 mb-4 w-fit"><button type="button" class="tab tab-active" data-calendar-tab="personal"><i class="fa-solid fa-user mr-2"></i>Personal</button><button type="button" class="tab" data-calendar-tab="team"><i class="fa-solid fa-people-group mr-2"></i>Team</button></div>{% endif %}
+    <section class="card bg-base-100 border border-base-300 mb-8 overflow-hidden"
+             data-calendar-panel="personal">
       <div class="card-body p-0">
-        <div class="flex flex-wrap items-center justify-between gap-4 px-5 sm:px-6 pt-5"><div><h3 class="card-title">Task calendar</h3><p class="text-sm opacity-60">Task timelines show priority, assignee and current status from their start through due date.</p></div><div class="flex items-center gap-2"><button id="calendar-prev" class="btn btn-ghost btn-sm btn-circle" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button><b id="calendar-title" class="min-w-36 text-center"></b><button id="calendar-next" class="btn btn-ghost btn-sm btn-circle" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button><button id="calendar-today" class="btn btn-outline btn-sm ml-1">Today</button></div></div>
+        <div class="flex flex-wrap items-center justify-between gap-4 px-5 sm:px-6 pt-5">
+          <div>
+            <h3 class="card-title">Task calendar</h3>
+            <p class="text-sm opacity-60">Task timelines show priority, assignee and current status from their start through due date.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="calendar-prev"
+                    class="btn btn-ghost btn-sm btn-circle"
+                    aria-label="Previous month">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button><b id="calendar-title" class="min-w-36 text-center"></b><button id="calendar-next"
+        class="btn btn-ghost btn-sm btn-circle"
+        aria-label="Next month">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button><button id="calendar-today" class="btn btn-outline btn-sm ml-1">Today</button>
+          </div>
+        </div>
         <div class="flex flex-wrap gap-3 px-5 sm:px-6 py-3 text-xs"><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-emerald-500"></i>Low</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-amber-400"></i>Medium</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-orange-500"></i>High</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-red-600"></i>Urgent</span></div>
-        <div class="overflow-x-auto border-t border-base-300"><div class="min-w-[760px]"><div class="grid grid-cols-7 bg-base-200 text-[11px] uppercase tracking-wider font-bold opacity-60"><div class="px-3 py-2 text-center">Mon</div><div class="px-3 py-2 text-center">Tue</div><div class="px-3 py-2 text-center">Wed</div><div class="px-3 py-2 text-center">Thu</div><div class="px-3 py-2 text-center">Fri</div><div class="px-3 py-2 text-center">Sat</div><div class="px-3 py-2 text-center">Sun</div></div><div id="task-calendar" class="grid grid-cols-7"></div></div></div>
+        <div class="overflow-x-auto border-t border-base-300">
+          <div class="min-w-[760px]">
+            <div class="grid grid-cols-7 bg-base-200 text-[11px] uppercase tracking-wider font-bold opacity-60">
+              <div class="px-3 py-2 text-center">Mon</div>
+              <div class="px-3 py-2 text-center">Tue</div>
+              <div class="px-3 py-2 text-center">Wed</div>
+              <div class="px-3 py-2 text-center">Thu</div>
+              <div class="px-3 py-2 text-center">Fri</div>
+              <div class="px-3 py-2 text-center">Sat</div>
+              <div class="px-3 py-2 text-center">Sun</div>
+            </div>
+            <div id="task-calendar" class="grid grid-cols-7"></div>
+          </div>
+        </div>
       </div>
     </section>
     {{ task_events|json_script:"task-calendar-events" }}
-    {% if current_profile.role == 'manager' %}<section class="card bg-base-100 border border-base-300 mb-8 overflow-hidden hidden" data-calendar-panel="team"><div class="card-body p-0"><div class="flex flex-wrap items-center justify-between gap-4 px-5 sm:px-6 pt-5"><div><h3 class="card-title"><i class="fa-solid fa-people-group text-orange-500"></i> Team task calendar</h3><p class="text-sm opacity-60">Active work for all {{ team_member_count }} employee{{ team_member_count|pluralize }} in your reporting hierarchy, including indirect reports.</p></div><div class="flex items-center gap-2"><button id="team-calendar-prev" class="btn btn-ghost btn-sm btn-circle" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button><b id="team-calendar-title" class="min-w-36 text-center"></b><button id="team-calendar-next" class="btn btn-ghost btn-sm btn-circle" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button><button id="team-calendar-today" class="btn btn-outline btn-sm ml-1">Today</button></div></div><div class="flex flex-wrap gap-3 px-5 sm:px-6 py-3 text-xs"><span class="font-semibold">Priority:</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-emerald-500"></i>Low</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-amber-400"></i>Medium</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-orange-500"></i>High</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-red-600"></i>Urgent</span></div><div class="overflow-x-auto border-t border-base-300"><div class="min-w-[760px]"><div class="grid grid-cols-7 bg-base-200 text-[11px] uppercase tracking-wider font-bold opacity-60"><div class="px-3 py-2 text-center">Mon</div><div class="px-3 py-2 text-center">Tue</div><div class="px-3 py-2 text-center">Wed</div><div class="px-3 py-2 text-center">Thu</div><div class="px-3 py-2 text-center">Fri</div><div class="px-3 py-2 text-center">Sat</div><div class="px-3 py-2 text-center">Sun</div></div><div id="team-task-calendar" class="grid grid-cols-7"></div></div></div></div></section>{{ team_task_events|json_script:"team-task-calendar-events" }}{% endif %}
+    {% if current_profile.role == 'manager' %}<section class="card bg-base-100 border border-base-300 mb-8 overflow-hidden hidden"
+         data-calendar-panel="team"><div class="card-body p-0"><div class="flex flex-wrap items-center justify-between gap-4 px-5 sm:px-6 pt-5"><div><h3 class="card-title"><i class="fa-solid fa-people-group text-orange-500"></i> Team task calendar</h3><p class="text-sm opacity-60">Active work for all {{ team_member_count }} employee{{ team_member_count|pluralize }} in your reporting hierarchy, including indirect reports.</p></div><div class="flex items-center gap-2"><button id="team-calendar-prev"
+        class="btn btn-ghost btn-sm btn-circle"
+        aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button><b id="team-calendar-title" class="min-w-36 text-center"></b><button id="team-calendar-next"
+        class="btn btn-ghost btn-sm btn-circle"
+        aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button><button id="team-calendar-today" class="btn btn-outline btn-sm ml-1">Today</button></div></div><div class="flex flex-wrap gap-3 px-5 sm:px-6 py-3 text-xs"><span class="font-semibold">Priority:</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-emerald-500"></i>Low</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-amber-400"></i>Medium</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-orange-500"></i>High</span><span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-red-600"></i>Urgent</span></div><div class="overflow-x-auto border-t border-base-300"><div class="min-w-[760px]"><div class="grid grid-cols-7 bg-base-200 text-[11px] uppercase tracking-wider font-bold opacity-60"><div class="px-3 py-2 text-center">Mon</div><div class="px-3 py-2 text-center">Tue</div><div class="px-3 py-2 text-center">Wed</div><div class="px-3 py-2 text-center">Thu</div><div class="px-3 py-2 text-center">Fri</div><div class="px-3 py-2 text-center">Sat</div><div class="px-3 py-2 text-center">Sun</div></div><div id="team-task-calendar" class="grid grid-cols-7"></div></div></div></div></section>{{ team_task_events|json_script:"team-task-calendar-events" }}{% endif %}
   {% endif %}
   {% if super_view %}
     <div class="grid md:grid-cols-3 gap-4 mb-6">
-      <a href="{% url 'platform_organizations' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+      <a href="{% url 'platform_organizations' %}"
+         class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
         <div class="card-body">
           <div class="text-primary text-2xl">🏢</div>
           <h3 class="card-title">Organizations</h3>
           <p class="text-sm opacity-60">Inspect workspaces, review their data, and suspend or restore access.</p>
         </div>
       </a>
-      <a href="{% url 'platform_users' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+      <a href="{% url 'platform_users' %}"
+         class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
         <div class="card-body">
           <div class="text-primary text-2xl">👥</div>
           <h3 class="card-title">All users</h3>
           <p class="text-sm opacity-60">Find accounts across organizations and manage their access.</p>
         </div>
       </a>
-      <a href="{% url 'platform_activity' %}" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
+      <a href="{% url 'platform_activity' %}"
+         class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
         <div class="card-body">
           <div class="text-primary text-2xl">🕘</div>
           <h3 class="card-title">System activity</h3>
@@ -58,68 +101,158 @@
     <div class="card bg-base-100">
       <div class="card-body">
         <h3 class="card-title">Recent platform activity</h3>{% for row in recent_audit %}
-          <div class="flex justify-between border-b py-3">
-            <span>{{ row.action }} · {{ row.actor|default:'System' }}</span><span class="text-sm opacity-60">{{ row.created_at|timesince }} ago</span>
-          </div>
-        {% empty %}
-          <p>No activity yet.</p>
-        {% endfor %}
-      </div>
-    </div>
-  {% else %}
-    <div class="grid xl:grid-cols-3 gap-6">
-      <div class="card bg-base-100 xl:col-span-2">
-        <div class="card-body">
-          <div class="flex justify-between">
-            <h3 class="card-title">Priority work</h3><a href="{% url 'tasks' %}" class="link">View all</a>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="table">
-              <thead>
+        <div class="flex justify-between border-b py-3">
+          <span>{{ row.action }} · {{ row.actor|default:'System' }}</span><span class="text-sm opacity-60">{{ row.created_at|timesince }} ago</span>
+        </div>
+  {% empty %}
+    <p>No activity yet.</p>
+  {% endfor %}
+  </div>
+  </div>
+{% else %}
+  <div class="grid xl:grid-cols-3 gap-6">
+    <div class="card bg-base-100 xl:col-span-2">
+      <div class="card-body">
+        <div class="flex justify-between">
+          <h3 class="card-title">Priority work</h3><a href="{% url 'tasks' %}" class="link">View all</a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for task in tasks %}
                 <tr>
-                  <th>Task</th>
-                  <th>Owner</th>
-                  <th>Status</th>
-                  <th>Due</th>
+                  <td>
+                    <a class="font-semibold link" href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
+                  </td>
+                  <td>{{ task.assigned_to }}</td>
+                  <td>
+                    <span class="badge badge-ghost">{{ task.get_status_display }}</span>
+                  </td>
+                  <td class="{% if task.is_overdue %}text-error font-bold{% endif %}">{{ task.due_date }}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {% for task in tasks %}
-                  <tr>
-                    <td>
-                      <a class="font-semibold link" href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
-                    </td>
-                    <td>{{ task.assigned_to }}</td>
-                    <td>
-                      <span class="badge badge-ghost">{{ task.get_status_display }}</span>
-                    </td>
-                    <td class="{% if task.is_overdue %}text-error font-bold{% endif %}">{{ task.due_date }}</td>
-                  </tr>
-                {% empty %}
-                  <tr>
-                    <td colspan="4">No tasks yet.</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="card bg-base-100">
-        <div class="card-body">
-          <h3 class="card-title">Timesheets</h3>{% for sheet in timesheets %}
-            <a href="{% url 'timesheet_detail' sheet.pk %}" class="border-b py-3">
-              <div class="font-semibold">{{ sheet.employee }}</div>
-              <div class="text-sm opacity-60">{{ sheet.period_start }} · {{ sheet.get_status_display }}</div>
-            </a>
-          {% empty %}
-            <p class="opacity-60">No timesheets yet.</p>
-          {% endfor %}
+              {% empty %}
+                <tr>
+                  <td colspan="4">No tasks yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  {% endif %}
-  {% if not super_view %}<script>
-  (()=>{const priority={low:'bg-emerald-500',medium:'bg-amber-400 text-slate-900',high:'bg-orange-500',urgent:'bg-red-600'},today=new Date(),iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;function createCalendar(eventsId,gridId,prefix){const source=document.getElementById(eventsId),grid=document.getElementById(gridId),title=document.getElementById(`${prefix}-title`);if(!source||!grid||!title)return;const events=JSON.parse(source.textContent);let cursor=new Date(today.getFullYear(),today.getMonth(),1);function render(){grid.innerHTML='';title.textContent=cursor.toLocaleDateString(undefined,{month:'long',year:'numeric'});const year=cursor.getFullYear(),month=cursor.getMonth(),offset=(new Date(year,month,1).getDay()+6)%7,days=new Date(year,month+1,0).getDate(),cells=Math.ceil((offset+days)/7)*7;for(let i=0;i<cells;i++){const day=i-offset+1,cell=document.createElement('div');cell.className='min-h-32 border-r border-b border-base-300 p-2 last:border-r-0';if(day<1||day>days){cell.classList.add('bg-base-200/40');grid.append(cell);continue}const date=new Date(year,month,day),dateIso=iso(date),number=document.createElement('div');number.className=`text-xs font-semibold mb-1 ${dateIso===iso(today)?'w-7 h-7 rounded-full bg-emerald-600 text-white grid place-items-center':''}`;number.textContent=day;cell.append(number);const matches=events.filter(event=>event.start<=dateIso&&event.due>=dateIso);matches.slice(0,3).forEach(event=>{const link=document.createElement('a'),name=document.createElement('span'),meta=document.createElement('span');link.href=event.url;link.className=`block rounded-md px-2 py-1.5 mb-1 text-[10px] font-semibold text-white ${priority[event.priority]||priority.medium}`;name.className='block truncate';name.textContent=event.title;meta.className='block truncate text-[9px] opacity-90 font-normal';meta.textContent=`${event.assignee} · ${event.status_label}`;link.append(name,meta);link.title=`${event.title} · ${event.assignee} · ${event.status_label} · ${event.start} to ${event.due}`;cell.append(link)});if(matches.length>3){const more=document.createElement('div');more.className='text-[10px] opacity-50 px-1';more.textContent=`+${matches.length-3} more`;cell.append(more)}grid.append(cell)}}document.getElementById(`${prefix}-prev`).onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);render()};document.getElementById(`${prefix}-next`).onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);render()};document.getElementById(`${prefix}-today`).onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);render()};render()}createCalendar('task-calendar-events','task-calendar','calendar');createCalendar('team-task-calendar-events','team-task-calendar','team-calendar');document.querySelectorAll('[data-calendar-tab]').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('[data-calendar-tab]').forEach(item=>item.classList.toggle('tab-active',item===tab));document.querySelectorAll('[data-calendar-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.calendarPanel!==tab.dataset.calendarTab))}))})();
-  </script>{% endif %}
+    <div class="card bg-base-100">
+      <div class="card-body">
+        <h3 class="card-title">Timesheets</h3>{% for sheet in timesheets %}
+        <a href="{% url 'timesheet_detail' sheet.pk %}" class="border-b py-3">
+          <div class="font-semibold">{{ sheet.employee }}</div>
+          <div class="text-sm opacity-60">{{ sheet.period_start }} · {{ sheet.get_status_display }}</div>
+        </a>
+{% empty %}
+  <p class="opacity-60">No timesheets yet.</p>
+{% endfor %}
+</div>
+</div>
+</div>
+{% endif %}
+{% if not super_view %}
+  <script>
+      (() => {
+          const priority = {
+                  low: 'bg-emerald-500',
+                  medium: 'bg-amber-400 text-slate-900',
+                  high: 'bg-orange-500',
+                  urgent: 'bg-red-600'
+              },
+              today = new Date(),
+              iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+
+          function createCalendar(eventsId, gridId, prefix) {
+              const source = document.getElementById(eventsId),
+                  grid = document.getElementById(gridId),
+                  title = document.getElementById(`${prefix}-title`);
+              if (!source || !grid || !title) return;
+              const events = JSON.parse(source.textContent);
+              let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+
+              function render() {
+                  grid.innerHTML = '';
+                  title.textContent = cursor.toLocaleDateString(undefined, {
+                      month: 'long',
+                      year: 'numeric'
+                  });
+                  const year = cursor.getFullYear(),
+                      month = cursor.getMonth(),
+                      offset = (new Date(year, month, 1).getDay() + 6) % 7,
+                      days = new Date(year, month + 1, 0).getDate(),
+                      cells = Math.ceil((offset + days) / 7) * 7;
+                  for (let i = 0; i < cells; i++) {
+                      const day = i - offset + 1,
+                          cell = document.createElement('div');
+                      cell.className = 'min-h-32 border-r border-b border-base-300 p-2 last:border-r-0';
+                      if (day < 1 || day > days) {
+                          cell.classList.add('bg-base-200/40');
+                          grid.append(cell);
+                          continue
+                      }
+                      const date = new Date(year, month, day),
+                          dateIso = iso(date),
+                          number = document.createElement('div');
+                      number.className = `text-xs font-semibold mb-1 ${dateIso===iso(today)?'w-7 h-7 rounded-full bg-emerald-600 text-white grid place-items-center':''}`;
+                      number.textContent = day;
+                      cell.append(number);
+                      const matches = events.filter(event => event.start <= dateIso && event.due >= dateIso);
+                      matches.slice(0, 3).forEach(event => {
+                          const link = document.createElement('a'),
+                              name = document.createElement('span'),
+                              meta = document.createElement('span');
+                          link.href = event.url;
+                          link.className = `block rounded-md px-2 py-1.5 mb-1 text-[10px] font-semibold text-white ${priority[event.priority]||priority.medium}`;
+                          name.className = 'block truncate';
+                          name.textContent = event.title;
+                          meta.className = 'block truncate text-[9px] opacity-90 font-normal';
+                          meta.textContent = `${event.assignee} · ${event.status_label}`;
+                          link.append(name, meta);
+                          link.title = `${event.title} · ${event.assignee} · ${event.status_label} · ${event.start} to ${event.due}`;
+                          cell.append(link)
+                      });
+                      if (matches.length > 3) {
+                          const more = document.createElement('div');
+                          more.className = 'text-[10px] opacity-50 px-1';
+                          more.textContent = `+${matches.length-3} more`;
+                          cell.append(more)
+                      }
+                      grid.append(cell)
+                  }
+              }
+              document.getElementById(`${prefix}-prev`).onclick = () => {
+                  cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+                  render()
+              };
+              document.getElementById(`${prefix}-next`).onclick = () => {
+                  cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+                  render()
+              };
+              document.getElementById(`${prefix}-today`).onclick = () => {
+                  cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+                  render()
+              };
+              render()
+          }
+          createCalendar('task-calendar-events', 'task-calendar', 'calendar');
+          createCalendar('team-task-calendar-events', 'team-task-calendar', 'team-calendar');
+          document.querySelectorAll('[data-calendar-tab]').forEach(tab => tab.addEventListener('click', () => {
+              document.querySelectorAll('[data-calendar-tab]').forEach(item => item.classList.toggle('tab-active', item === tab));
+              document.querySelectorAll('[data-calendar-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.calendarPanel !== tab.dataset.calendarTab))
+          }))
+      })();
+  </script>
+{% endif %}
 {% endblock %}

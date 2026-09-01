@@ -5,21 +5,24 @@
     <div class="hidden lg:flex bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 text-white p-16 items-end relative overflow-hidden">
       <div class="absolute -top-20 -left-20 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl"></div>
       <div class="relative">
-        <img src="{% static 'images/powerpaylogo.png' %}" class="w-52 mb-8" alt="PowerPay" /><h1 class="text-5xl font-black">Clarity for every team. <span class="text-orange-400">Control</span> for every organization.</h1>
+        <img src="{% static 'images/powerpaylogo.png' %}"
+             class="w-52 mb-8"
+             alt="PowerPay" /><h1 class="text-5xl font-black">Clarity for every team. <span class="text-orange-400">Control</span> for every organization.</h1>
       </div>
     </div>
     <div class="grid place-items-center p-6">
       <div class="w-full max-w-md">
-        <img src="{% static 'images/powerpaylogo.png' %}" class="w-40 mb-8 lg:hidden" /><h2 class="text-3xl font-bold">Welcome back</h2><p class="text-base-content/60 mt-2 mb-8">Sign in to your organization workspace.</p>
+        <img src="{% static 'images/powerpaylogo.png' %}"
+             class="w-40 mb-8 lg:hidden" /><h2 class="text-3xl font-bold">Welcome back</h2><p class="text-base-content/60 mt-2 mb-8">Sign in to your organization workspace.</p>
         <form method="post" class="space-y-5">
           {% csrf_token %}{{ form.as_p }}{% if form.errors %}
-            <div class="alert alert-error">Check your username and password.</div>
-          {% endif %}<button class="btn btn-primary w-full">Sign in</button>
-        </form>
-        <p class="mt-6 text-center">
-          <a class="link link-primary" href="{% url 'password_reset' %}">Forgot password?</a> · New here? <a class="link link-primary" href="{% url 'register' %}">Create a workspace</a>
-        </p>
-      </div>
-    </div>
-  </div>
+          <div class="alert alert-error">Check your username and password.</div>
+{% endif %}<button class="btn btn-primary w-full">Sign in</button>
+</form>
+<p class="mt-6 text-center">
+  <a class="link link-primary" href="{% url 'password_reset' %}">Forgot password?</a> · New here? <a class="link link-primary" href="{% url 'register' %}">Create a workspace</a>
+</p>
+</div>
+</div>
+</div>
 {% endblock %}

@@ -3,7 +3,9 @@
 {% block public_content %}
   <div class="navbar bg-base-100 px-6 lg:px-16">
     <div class="flex-1">
-      <img src="{% static 'images/powerpaylogo.png' %}" class="w-64" alt="PowerPay" />
+      <img src="{% static 'images/powerpaylogo.png' %}"
+           class="w-64"
+           alt="PowerPay" />
     </div><a href="{% url 'login' %}" class="btn btn-ghost mr-6">Sign in</a><a href="{% url 'register' %}" class="btn btn-primary">Create workspace</a>
   </div>
   <section class="hero min-h-[95vh] bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 text-white relative overflow-hidden">

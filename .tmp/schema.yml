@@ -1,0 +1,1423 @@
+openapi: 3.0.3
+info:
+  title: PowerpayERP API
+  version: 1.0.0
+  description: Tenant-safe ERP API for tasks, timesheets, and documents. Organization
+    administrators can access only their organization; platform administrators can
+    access all organizations.
+paths:
+  /api/documents/:
+    get:
+      operationId: documents_list
+      description: Returns paginated documents with organization, visibility, department,
+        owner, uploader, category, search, and ordering filters.
+      summary: List documents
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+      - in: query
+        name: category__icontains
+        schema:
+          type: string
+      - in: query
+        name: created_at__date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: created_at__date__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: created_at__date__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: department
+        schema:
+          type: integer
+      - in: query
+        name: department__isnull
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: organization
+        schema:
+          type: integer
+      - in: query
+        name: owner
+        schema:
+          type: integer
+      - in: query
+        name: owner__isnull
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: uploaded_by
+        schema:
+          type: integer
+      - in: query
+        name: visibility
+        schema:
+          type: string
+          enum:
+          - department
+          - organization
+          - private
+        description: |-
+          * `organization` - Organization
+          * `department` - Department
+          * `private` - Private
+      - in: query
+        name: visibility__in
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      tags:
+      - Documents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentList'
+          description: ''
+    post:
+      operationId: documents_create
+      description: Creates a document and validates its file, visibility, department,
+        owner, and organization relationships.
+      summary: Upload a document
+      tags:
+      - Documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Document'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Document'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/documents/{id}/:
+    get:
+      operationId: documents_retrieve
+      description: Returns document metadata and an authorized download URL. Raw file
+        content is not embedded in the response.
+      summary: Get one document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    put:
+      operationId: documents_update
+      description: Replaces writable document metadata/file while enforcing tenant
+        and visibility rules.
+      summary: Replace a document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Document'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Document'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    patch:
+      operationId: documents_partial_update
+      description: Updates only supplied document fields while enforcing tenant and
+        visibility rules.
+      summary: Update part of a document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocument'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocument'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocument'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    delete:
+      operationId: documents_destroy
+      description: Permanently deletes a document record inside the caller's permitted
+        scope.
+      summary: Delete a document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/:
+    get:
+      operationId: tasks_list
+      description: Returns a paginated, filterable list of tasks. Organization administrators
+        see only their organization; platform administrators can see and filter all
+        organizations.
+      summary: List tasks
+      parameters:
+      - in: query
+        name: assigned_to
+        schema:
+          type: integer
+      - in: query
+        name: created_at__date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: created_at__date__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: created_at__date__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: department
+        schema:
+          type: integer
+      - in: query
+        name: department__isnull
+        schema:
+          type: boolean
+      - in: query
+        name: due_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: due_date__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: due_date__lte
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: organization
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum:
+          - high
+          - low
+          - medium
+          - urgent
+        description: |-
+          * `low` - Low
+          * `medium` - Medium
+          * `high` - High
+          * `urgent` - Urgent
+      - in: query
+        name: priority__in
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: start_date__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: start_date__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - assigned
+          - completed
+          - in_progress
+          - pending
+          - rejected
+          - submitted
+        description: |-
+          * `pending` - Pending
+          * `assigned` - Assigned
+          * `in_progress` - In Progress
+          * `submitted` - Submitted
+          * `approved` - Approved
+          * `rejected` - Rejected
+          * `completed` - Completed
+      - in: query
+        name: status__in
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      tags:
+      - Tasks
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskList'
+          description: ''
+    post:
+      operationId: tasks_create
+      description: Creates an assigned task. Organization administrators cannot assign
+        across organizations; platform administrators must select the target organization.
+      summary: Create a task
+      tags:
+      - Tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Task'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Task'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/:
+    get:
+      operationId: tasks_retrieve
+      description: Returns one task by ID if it is inside the caller's permitted organization
+        scope.
+      summary: Get one task
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - Tasks
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    put:
+      operationId: tasks_update
+      description: Replaces all writable fields on an existing task while preserving
+        tenant and status safeguards.
+      summary: Replace a task
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - Tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Task'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Task'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    patch:
+      operationId: tasks_partial_update
+      description: Updates only the supplied writable task fields. Use the transition
+        method to change status.
+      summary: Update part of a task
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - Tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTask'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTask'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTask'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    delete:
+      operationId: tasks_destroy
+      description: Permanently deletes a task inside the caller's permitted scope.
+      summary: Delete a task
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - Tasks
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/{id}/transition/:
+    post:
+      operationId: tasks_transition_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Task'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Task'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/timesheets/:
+    get:
+      operationId: timesheets_list
+      description: Returns paginated timesheets with employee, status, period, approver,
+        reviewer, search, and ordering filters.
+      summary: List timesheets
+      parameters:
+      - in: query
+        name: employee
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: organization
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: period_end
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_end__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_end__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_start
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_start__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_start__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: period_start__month
+        schema:
+          type: number
+      - in: query
+        name: period_start__year
+        schema:
+          type: number
+      - in: query
+        name: requested_approver
+        schema:
+          type: integer
+      - in: query
+        name: requested_approver__isnull
+        schema:
+          type: boolean
+      - in: query
+        name: reviewed_by
+        schema:
+          type: integer
+      - in: query
+        name: reviewed_by__isnull
+        schema:
+          type: boolean
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - draft
+          - rejected
+          - submitted
+        description: |-
+          * `draft` - Draft
+          * `submitted` - Submitted
+          * `approved` - Approved
+          * `rejected` - Rejected
+      - in: query
+        name: status__in
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: submitted_at__date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: submitted_at__date__gte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: submitted_at__date__lte
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: submitted_at__isnull
+        schema:
+          type: boolean
+      tags:
+      - Timesheets
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTimesheetList'
+          description: ''
+    post:
+      operationId: timesheets_create
+      description: Creates a monthly draft for the selected employee. Employee and
+        organization must match.
+      summary: Create a draft timesheet
+      tags:
+      - Timesheets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timesheet'
+          description: ''
+  /api/timesheets/{id}/:
+    get:
+      operationId: timesheets_retrieve
+      description: Returns one timesheet by ID inside the caller's organization scope.
+      summary: Get one timesheet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this timesheet.
+        required: true
+      tags:
+      - Timesheets
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timesheet'
+          description: ''
+    put:
+      operationId: timesheets_update
+      description: Replaces writable timesheet metadata. Organization administrators
+        cannot edit approved sheets; platform administrators can.
+      summary: Replace a timesheet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this timesheet.
+        required: true
+      tags:
+      - Timesheets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Timesheet'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timesheet'
+          description: ''
+    patch:
+      operationId: timesheets_partial_update
+      description: Updates only supplied writable timesheet fields while preserving
+        tenant validation.
+      summary: Update part of a timesheet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this timesheet.
+        required: true
+      tags:
+      - Timesheets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTimesheet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTimesheet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTimesheet'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timesheet'
+          description: ''
+    delete:
+      operationId: timesheets_destroy
+      description: Deletes a draft timesheet. Platform administrators may delete any
+        permitted timesheet.
+      summary: Delete a timesheet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this timesheet.
+        required: true
+      tags:
+      - Timesheets
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/token/:
+    post:
+      operationId: token_create
+      description: Submit an organization administrator or platform administrator
+        email and password. Returns a Bearer access token valid for 24 hours and a
+        rotating refresh token valid for 3 days. Employees and managers cannot obtain
+        API tokens.
+      summary: Get an access and refresh token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminTokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminTokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminTokenObtainPair'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: Submit a valid refresh token to obtain a new 24-hour access token.
+        The refresh token rotates, the previous refresh token is blacklisted, and
+        the replacement remains within the configured 3-day refresh lifetime.
+      summary: Refresh an access token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/token/verify/:
+    post:
+      operationId: token_verify_create
+      description: Checks whether an access or refresh token is correctly signed and
+        has not expired. A successful response has an empty body and HTTP 200 status.
+      summary: Verify a token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerify'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenVerify'
+          description: ''
+components:
+  schemas:
+    AdminTokenObtainPair:
+      type: object
+      description: Issue JWTs only to organization admins and platform superusers.
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        title:
+          type: string
+          maxLength: 180
+        category:
+          type: string
+          maxLength: 100
+        file:
+          type: string
+          format: uri
+          writeOnly: true
+        download_url:
+          type: string
+          readOnly: true
+        visibility:
+          $ref: '#/components/schemas/VisibilityEnum'
+        department:
+          type: integer
+          nullable: true
+        owner:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - download_url
+      - file
+      - id
+      - title
+    PaginatedDocumentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+    PaginatedTaskList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    PaginatedTimesheetList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timesheet'
+    PatchedDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        title:
+          type: string
+          maxLength: 180
+        category:
+          type: string
+          maxLength: 100
+        file:
+          type: string
+          format: uri
+          writeOnly: true
+        download_url:
+          type: string
+          readOnly: true
+        visibility:
+          $ref: '#/components/schemas/VisibilityEnum'
+        department:
+          type: integer
+          nullable: true
+        owner:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedTask:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        instructions:
+          type: string
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TaskStatusEnum'
+          readOnly: true
+        assigned_to:
+          type: integer
+        assignee_name:
+          type: string
+          readOnly: true
+        department:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        actual_started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        actual_completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedTimesheet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        employee:
+          type: integer
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TimesheetStatusEnum'
+          readOnly: true
+        total_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+          readOnly: true
+        service_contract:
+          type: string
+        financing:
+          type: string
+          maxLength: 240
+        contract_number:
+          type: string
+          maxLength: 100
+        country:
+          type: string
+          maxLength: 100
+        place_of_assignment:
+          type: string
+          maxLength: 180
+        initial_budget_days:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+    PriorityEnum:
+      enum:
+      - low
+      - medium
+      - high
+      - urgent
+      type: string
+      description: |-
+        * `low` - Low
+        * `medium` - Medium
+        * `high` - High
+        * `urgent` - Urgent
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        instructions:
+          type: string
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TaskStatusEnum'
+          readOnly: true
+        assigned_to:
+          type: integer
+        assignee_name:
+          type: string
+          readOnly: true
+        department:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        actual_started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        actual_completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actual_completed_at
+      - actual_started_at
+      - assigned_to
+      - assignee_name
+      - created_at
+      - due_date
+      - id
+      - status
+      - title
+    TaskStatusEnum:
+      enum:
+      - pending
+      - assigned
+      - in_progress
+      - submitted
+      - approved
+      - rejected
+      - completed
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `assigned` - Assigned
+        * `in_progress` - In Progress
+        * `submitted` - Submitted
+        * `approved` - Approved
+        * `rejected` - Rejected
+        * `completed` - Completed
+    Timesheet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        organization:
+          type: integer
+        employee:
+          type: integer
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TimesheetStatusEnum'
+          readOnly: true
+        total_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+          readOnly: true
+        service_contract:
+          type: string
+        financing:
+          type: string
+          maxLength: 240
+        contract_number:
+          type: string
+          maxLength: 100
+        country:
+          type: string
+          maxLength: 100
+        place_of_assignment:
+          type: string
+          maxLength: 180
+        initial_budget_days:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - employee
+      - id
+      - period_end
+      - period_start
+      - reviewed_at
+      - status
+      - submitted_at
+      - total_hours
+    TimesheetStatusEnum:
+      enum:
+      - draft
+      - submitted
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `submitted` - Submitted
+        * `approved` - Approved
+        * `rejected` - Rejected
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenVerify:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+      required:
+      - token
+    VisibilityEnum:
+      enum:
+      - organization
+      - department
+      - private
+      type: string
+      description: |-
+        * `organization` - Organization
+        * `department` - Department
+        * `private` - Private
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
