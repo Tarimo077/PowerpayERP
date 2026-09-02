@@ -7,3 +7,13 @@ Create these files on the production server:
 - `smtp_password.txt` — enter the SMTP/app password without a trailing newline
 
 The `*.txt` files in this directory are ignored by Git. Never commit real secrets.
+
+For file-backed Docker Compose secrets, use:
+
+```bash
+chmod 700 secrets
+chmod 644 secrets/*.txt
+```
+
+The directory remains private on the host, while the non-root application user can
+read the individual files after Docker mounts them at `/run/secrets/`.

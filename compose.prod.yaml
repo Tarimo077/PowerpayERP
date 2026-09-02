@@ -47,9 +47,12 @@ services:
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/smtp_password
       REDIS_URL: redis://redis:6379/1
     secrets:
-      - postgres_password
-      - django_secret_key
-      - smtp_password
+      - source: postgres_password
+        mode: 0444
+      - source: django_secret_key
+        mode: 0444
+      - source: smtp_password
+        mode: 0444
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
@@ -101,9 +104,12 @@ services:
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/smtp_password
       REDIS_URL: redis://redis:6379/1
     secrets:
-      - postgres_password
-      - django_secret_key
-      - smtp_password
+      - source: postgres_password
+        mode: 0444
+      - source: django_secret_key
+        mode: 0444
+      - source: smtp_password
+        mode: 0444
     command:
       - sh
       - -c

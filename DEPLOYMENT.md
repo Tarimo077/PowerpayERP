@@ -80,10 +80,26 @@ mkdir -p secrets
 openssl rand -base64 48 | tr -d '\n' > secrets/django_secret_key.txt
 openssl rand -base64 36 | tr -d '\n' > secrets/postgres_password.txt
 printf '%s' 'YOUR_REAL_SMTP_PASSWORD' > secrets/smtp_password.txt
-chmod 600 .env.production secrets/*.txt
+chmod 700 secrets
+chmod 600 .env.production
+chmod 644 secrets/*.txt
 ```
 
-Never commit `.env.production` or the secret text files.
+The secret directory is accessible only to its owner (`0700`). Its files are `0644`
+so the non-root UID `10001` inside the application container can read the
+file-backed Compose mounts. Because other host users cannot traverse the `secrets`
+directory, they still cannot read those files. Never commit `.env.production` or
+the secret text files.
+
+Confirm the application container can read the mounts before migrating:
+
+```bash
+docker compose \
+  --env-file .env.production \
+  -f compose.prod.yaml \
+  run --rm --no-deps web sh -c \
+  'test -r /run/secrets/django_secret_key && test -r /run/secrets/postgres_password && test -r /run/secrets/smtp_password'
+```
 
 ## 5. Validate and build
 
