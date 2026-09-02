@@ -72,6 +72,61 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_organization_admin_can_suspend_and_restore_own_employee(self):
+        admin_user = User.objects.create_user("admin", password="testpass123")
+        Profile.objects.create(user=admin_user, organization=self.o1, role="admin")
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("employee_access_action", args=[self.p1.pk, "suspend"])
+        )
+        self.assertRedirects(response, reverse("employees"))
+        self.p1.refresh_from_db()
+        self.u1.refresh_from_db()
+        self.assertEqual(self.p1.employment_status, "suspended")
+        self.assertFalse(self.u1.is_active)
+
+        self.client.post(
+            reverse("employee_access_action", args=[self.p1.pk, "activate"])
+        )
+        self.p1.refresh_from_db()
+        self.u1.refresh_from_db()
+        self.assertEqual(self.p1.employment_status, "active")
+        self.assertTrue(self.u1.is_active)
+
+    def test_organization_admin_cannot_remove_cross_tenant_employee(self):
+        admin_user = User.objects.create_user("admin", password="testpass123")
+        Profile.objects.create(user=admin_user, organization=self.o1, role="admin")
+        self.client.force_login(admin_user)
+
+        self.client.post(
+            reverse("employee_access_action", args=[self.p2.pk, "remove"])
+        )
+        self.p2.refresh_from_db()
+        self.u2.refresh_from_db()
+        self.assertEqual(self.p2.employment_status, "active")
+        self.assertTrue(self.u2.is_active)
+
+    def test_platform_admin_can_remove_an_employee_without_deleting_history(self):
+        platform_admin = User.objects.create_superuser(
+            "platform", "platform@example.com", "testpass123"
+        )
+        self.client.force_login(platform_admin)
+
+        response = self.client.post(
+            reverse("employee_access_action", args=[self.p1.pk, "remove"]),
+            {"source": "platform"},
+        )
+        self.assertRedirects(
+            response,
+            reverse("platform_organization_detail", args=[self.o1.pk]),
+        )
+        self.p1.refresh_from_db()
+        self.u1.refresh_from_db()
+        self.assertEqual(self.p1.employment_status, "removed")
+        self.assertFalse(self.u1.is_active)
+        self.assertTrue(Profile.objects.filter(pk=self.p1.pk).exists())
+
     def test_other_tenant_task_is_not_visible(self):
         self.client.login(username="one", password="testpass123")
         response = self.client.get(reverse("task_detail", args=[self.task.pk]))

@@ -196,6 +196,11 @@ urlpatterns = [
     ),
     path("employees/", views.employees, name="employees"),
     path("employees/new/", views.employee_create, name="employee_create"),
+    path(
+        "employees/<int:pk>/access/<str:action>/",
+        views.employee_access_action,
+        name="employee_access_action",
+    ),
     path("departments/", views.departments, name="departments"),
     path("documents/", views.documents, name="documents"),
     path("documents/upload/", views.document_upload, name="document_upload"),

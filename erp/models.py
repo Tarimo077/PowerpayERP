@@ -57,6 +57,11 @@ class Profile(TimeStamped):
         ("manager", "Manager"),
         ("employee", "Employee"),
     ]
+    EMPLOYMENT_STATUS_CHOICES = [
+        ("active", "Active"),
+        ("suspended", "Suspended"),
+        ("removed", "Removed"),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     organization = models.ForeignKey(
         Organization,
@@ -84,6 +89,11 @@ class Profile(TimeStamped):
         related_name="direct_reports",
     )
     hire_date = models.DateField(null=True, blank=True)
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EMPLOYMENT_STATUS_CHOICES,
+        default="active",
+    )
 
     class Meta:
         constraints = [

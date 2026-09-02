@@ -3306,6 +3306,73 @@ def employee_create(request):
 
 @login_required
 @roles_allowed("admin")
+@require_POST
+@transaction.atomic
+def employee_access_action(request, pk, action):
+    if action not in {"activate", "suspend", "remove"}:
+        return HttpResponse(status=404)
+
+    employee = get_object_or_404(
+        Profile.objects.select_for_update().select_related("user", "organization"),
+        pk=pk,
+    )
+    actor_profile = getattr(request.user, "profile", None)
+    if not request.user.is_superuser and (
+        not actor_profile
+        or actor_profile.role != "admin"
+        or actor_profile.organization_id != employee.organization_id
+    ):
+        messages.error(request, "You cannot manage employees outside your organization.")
+        return redirect("employees")
+
+    if employee.user_id == request.user.id:
+        messages.error(request, "You cannot change access for your own account.")
+        return redirect("employees")
+
+    if (
+        not request.user.is_superuser
+        and action in {"suspend", "remove"}
+        and employee.role == "admin"
+        and Profile.objects.filter(
+            organization=employee.organization,
+            role="admin",
+            employment_status="active",
+            user__is_active=True,
+        ).count()
+        <= 1
+    ):
+        messages.error(request, "The organization's last active administrator cannot be disabled.")
+        return redirect("employees")
+
+    employee.employment_status = {
+        "activate": "active",
+        "suspend": "suspended",
+        "remove": "removed",
+    }[action]
+    employee.user.is_active = action == "activate"
+    employee.save(update_fields=["employment_status", "updated_at"])
+    employee.user.save(update_fields=["is_active"])
+    audit_action = {
+        "activate": "employee_activated",
+        "suspend": "employee_suspended",
+        "remove": "employee_removed",
+    }[action]
+    _audit(request, audit_action, employee)
+    messages.success(
+        request,
+        {
+            "activate": f"{employee} can now sign in again.",
+            "suspend": f"{employee} has been suspended.",
+            "remove": f"{employee} has been removed and can no longer sign in.",
+        }[action],
+    )
+    if request.user.is_superuser and request.POST.get("source") == "platform":
+        return redirect("platform_organization_detail", pk=employee.organization_id)
+    return redirect("employees")
+
+
+@login_required
+@roles_allowed("admin")
 def departments(request):
     p = _profile(request)
     form = DepartmentForm(request.POST or None)
