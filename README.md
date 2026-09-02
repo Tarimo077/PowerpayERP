@@ -396,6 +396,8 @@ Login still requires the emailed OTP. These credentials are development-only.
 
 ## Testing and production
 
+The repository includes a complete Docker production bundle for `erp.powerpayafrica.com`. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for DNS, secrets, PostgreSQL migrations, static files, TLS, backups, updates, and rollback instructions.
+
 Run verification with:
 
 ```powershell

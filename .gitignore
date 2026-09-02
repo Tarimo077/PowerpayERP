@@ -5,6 +5,7 @@ db.sqlite3
 media/
 staticfiles/
 .env
-*/migrations/*
-*/management/*
-.env.example
+.env.production
+secrets/*.txt
+deploy/certbot/
+backups/

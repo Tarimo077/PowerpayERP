@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.production
+.venv
+powerpayerpvenv
+__pycache__
+*.py[cod]
+db.sqlite3
+media
+staticfiles
+backups
+secrets
+.tmp
+deploy/certbot

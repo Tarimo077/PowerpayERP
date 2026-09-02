@@ -67,6 +67,11 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         return f"Bearer {response.json()['access']}"
 
+    def test_container_healthcheck_checks_database_and_cache(self):
+        response = self.client.get(reverse("healthcheck"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
     def test_other_tenant_task_is_not_visible(self):
         self.client.login(username="one", password="testpass123")
         response = self.client.get(reverse("task_detail", args=[self.task.pk]))
@@ -159,9 +164,7 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(self.client.get("/api/schema/").status_code, 200)
 
         authorization = self.api_authorization(admin)
-        response = self.client.get(
-            "/api/tasks/", HTTP_AUTHORIZATION=authorization
-        )
+        response = self.client.get("/api/tasks/", HTTP_AUTHORIZATION=authorization)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["count"], 0)
 
