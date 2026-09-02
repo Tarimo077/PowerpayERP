@@ -71,6 +71,16 @@ ALLOWED_HOSTS=erp.powerpayafrica.com
 CSRF_TRUSTED_ORIGINS=https://erp.powerpayafrica.com
 SITE_URL=https://erp.powerpayafrica.com
 DATABASE_ENGINE=postgresql
+POSTGRES_DB=powerpayerp
+POSTGRES_USER=powerpayerp
+```
+
+Neither `POSTGRES_DB` nor `POSTGRES_USER` may be blank. Validate what Compose will
+receive before starting containers:
+
+```bash
+grep -E '^(DATABASE_ENGINE|POSTGRES_DB|POSTGRES_USER)=' .env.production
+docker compose --env-file .env.production -f compose.prod.yaml config --environment
 ```
 
 Create secrets without trailing newlines:
@@ -337,3 +347,40 @@ docker compose --env-file .env.production -f compose.prod.yaml down
 ```
 
 Do not use `docker compose down -v` in production: `-v` deletes named volumes containing the database, media, certificates, and other persistent data.
+
+## Troubleshooting PostgreSQL password authentication
+
+The PostgreSQL image reads `POSTGRES_PASSWORD_FILE` only when it initializes an
+empty data directory. Replacing `secrets/postgres_password.txt` later does not
+change the password stored for an existing PostgreSQL role.
+
+First confirm the host and both containers see the same secret without printing it:
+
+```bash
+sha256sum secrets/postgres_password.txt
+docker compose --env-file .env.production -f compose.prod.yaml exec db sha256sum /run/secrets/postgres_password
+docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps web sha256sum /run/secrets/postgres_password
+```
+
+All three hashes must match. If they match but PostgreSQL reports `password
+authentication failed`, synchronize the existing role with the mounted secret:
+
+```bash
+docker compose --env-file .env.production -f compose.prod.yaml exec db sh -eu -c '
+  new_password=$(cat /run/secrets/postgres_password)
+  psql --username "$POSTGRES_USER" --dbname postgres --set ON_ERROR_STOP=on \
+    --command "ALTER ROLE powerpayerp WITH PASSWORD '\''${new_password}'\'';"
+'
+```
+
+The generated passwords documented in this runbook use Base64 characters and do
+not contain single quotes. If a manually chosen password may contain a single
+quote, generate a new password with the documented `openssl rand -base64` command
+before synchronizing it.
+
+Recreate the application containers afterward; do not delete the database volume:
+
+```bash
+docker compose --env-file .env.production -f compose.prod.yaml up -d --force-recreate web email-retry
+docker compose --env-file .env.production -f compose.prod.yaml run --rm web python manage.py migrate
+```

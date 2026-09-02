@@ -101,11 +101,11 @@ if os.getenv("DATABASE_ENGINE", "sqlite").lower() == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "powerpayerp"),
-            "USER": os.getenv("POSTGRES_USER", "powerpayerp"),
+            "NAME": os.getenv("POSTGRES_DB") or "powerpayerp",
+            "USER": os.getenv("POSTGRES_USER") or "powerpayerp",
             "PASSWORD": secret_value("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST", "db"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "HOST": os.getenv("POSTGRES_HOST") or "db",
+            "PORT": os.getenv("POSTGRES_PORT") or "5432",
             "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
             "CONN_HEALTH_CHECKS": True,
             "OPTIONS": {"sslmode": os.getenv("POSTGRES_SSLMODE", "prefer")},

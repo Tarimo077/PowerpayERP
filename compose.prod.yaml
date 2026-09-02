@@ -5,15 +5,19 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.production}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.production}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:?Set POSTGRES_USER in .env.production} -d ${POSTGRES_DB:?Set POSTGRES_DB in .env.production}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -47,12 +51,9 @@ services:
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/smtp_password
       REDIS_URL: redis://redis:6379/1
     secrets:
-      - source: postgres_password
-        mode: 0444
-      - source: django_secret_key
-        mode: 0444
-      - source: smtp_password
-        mode: 0444
+      - postgres_password
+      - django_secret_key
+      - smtp_password
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
@@ -104,12 +105,9 @@ services:
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/smtp_password
       REDIS_URL: redis://redis:6379/1
     secrets:
-      - source: postgres_password
-        mode: 0444
-      - source: django_secret_key
-        mode: 0444
-      - source: smtp_password
-        mode: 0444
+      - postgres_password
+      - django_secret_key
+      - smtp_password
     command:
       - sh
       - -c
