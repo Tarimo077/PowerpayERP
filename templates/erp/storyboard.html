@@ -335,7 +335,7 @@
                   steps: [
                       ['action', 'Sign in with email', 'Enter the email tied to your employee record and your private password.', 'A valid password triggers an OTP instead of immediately opening a session.'],
                       ['workflow', 'Verify the six-digit OTP', 'Enter the code from email using the six individual boxes. Codes expire after five minutes.', 'A verified code creates the authenticated server-side session.'],
-                      ['result', 'Recover access safely', 'Use Forgot password to receive a single-use Django password reset link.', 'Credentials can be replaced without administrator access to passwords.']
+                      ['result', 'Recover access safely', 'Use Forgot password to receive a single-use Powerpay password reset link.', 'Credentials can be replaced without administrator access to passwords.']
                   ]
               },
               organization: {
@@ -508,8 +508,8 @@
                   nav: 'audit',
                   steps: [
                       ['table', 'Review the audit log', 'Organization admins see actors, actions, entity references and timestamps for their tenant.', 'Operational changes remain accountable.'],
-                      ['workflow', 'Use tenant-scoped APIs', 'Session-authenticated endpoints expose tasks, timesheets and documents through Django REST Framework.', 'API results follow the same organization boundary.'],
-                      ['cards', 'Platform oversight', 'Django superusers receive platform counts and cross-organization activity through the superadmin dashboard and admin.', 'Platform control remains separate from organization roles.']
+                      ['workflow', 'Use tenant-scoped APIs', 'Session-authenticated endpoints expose tasks, timesheets and documents through Powerpay REST Framework.', 'API results follow the same organization boundary.'],
+                      ['cards', 'Platform oversight', 'Powerpay superusers receive platform counts and cross-organization activity through the superadmin dashboard and admin.', 'Platform control remains separate from organization roles.']
                   ]
               }
           };

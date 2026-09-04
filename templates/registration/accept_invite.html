@@ -4,7 +4,7 @@
   <div class="min-h-screen bg-base-200 grid place-items-center p-6">
     <div class="card bg-white shadow-xl w-full max-w-lg border-t-4 border-orange-500">
       <form method="post" class="card-body">
-        {% csrf_token %}<img src="{% static 'images/powerpaylogo.png' %}" class="w-40" /><h1 class="text-2xl font-bold">Join {{ invite.organization.name }}</h1><p class="opacity-60">Activate {{ invite.email }} as {{ invite.get_role_display }}. Choose a private password that satisfies Django’s security requirements below.</p>{{ form.as_p }}<button class="btn btn-primary">Activate account</button>
+        {% csrf_token %}<img src="{% static 'images/powerpaylogo.png' %}" class="w-40" /><h1 class="text-2xl font-bold">Join {{ invite.organization.name }}</h1><p class="opacity-60">Activate {{ invite.email }} as {{ invite.get_role_display }}. Choose a private password that satisfies Powerpay’s security requirements below.</p>{{ form.as_p }}<button class="btn btn-primary">Activate account</button>
       </form>
     </div>
   </div>
