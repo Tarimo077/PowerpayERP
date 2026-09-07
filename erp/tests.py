@@ -33,6 +33,7 @@ from .models import (
     PaymentVoucher,
     PaymentVoucherReceipt,
     Project,
+    Receipt,
     UserInvite,
 )
 
@@ -2201,3 +2202,131 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(too_many.status_code, 200)
         self.assertContains(too_many, "only 2 are available")
         self.assertEqual(LeaveRequest.objects.filter(employee=self.p1).count(), 1)
+
+    def test_receipt_visibility_sharing_admin_notification_and_pdf_download(self):
+        colleague_user = User.objects.create_user(
+            "receipt-colleague", password="testpass123"
+        )
+        colleague = Profile.objects.create(
+            user=colleague_user,
+            organization=self.o1,
+            role="employee",
+        )
+        unshared_user = User.objects.create_user(
+            "receipt-unshared", password="testpass123"
+        )
+        Profile.objects.create(
+            user=unshared_user,
+            organization=self.o1,
+            role="employee",
+        )
+        admin_user = User.objects.create_user(
+            "receipt-admin", password="testpass123"
+        )
+        Profile.objects.create(
+            user=admin_user,
+            organization=self.o1,
+            role="admin",
+        )
+        project = Project.objects.create(
+            organization=self.o1,
+            name="Receipt project",
+            code="RCP",
+            status="active",
+        )
+        task = Task.objects.create(
+            organization=self.o1,
+            project=project,
+            title="Make project payment",
+            assigned_to=self.p1,
+            created_by=self.u1,
+            due_date=timezone.localdate(),
+        )
+        pdf = SimpleUploadedFile(
+            "payment.pdf",
+            b"%PDF-1.4\n%%EOF",
+            content_type="application/pdf",
+        )
+        with tempfile.TemporaryDirectory() as media_root, self.settings(
+            MEDIA_ROOT=media_root
+        ):
+            self.client.force_login(self.u1)
+            response = self.client.post(
+                reverse("receipt_create"),
+                {
+                    "title": "Supplier payment",
+                    "payment_date": "2026-09-07",
+                    "vendor": "Example Supplier",
+                    "amount": "1250.00",
+                    "currency": "KES",
+                    "project": project.pk,
+                    "task": task.pk,
+                    "shared_with": [colleague.pk],
+                    "file": pdf,
+                },
+            )
+            self.assertRedirects(response, reverse("receipts"))
+            receipt = Receipt.objects.get(title="Supplier payment")
+            self.assertTrue(receipt.shared_with.filter(pk=colleague.pk).exists())
+            self.assertTrue(
+                Notification.objects.filter(
+                    user=admin_user,
+                    title="Receipt submitted",
+                ).exists()
+            )
+            owner_download = self.client.get(
+                reverse("receipt_download", args=[receipt.pk])
+            )
+            self.assertEqual(owner_download.status_code, 200)
+            owner_download.close()
+
+            self.client.force_login(colleague_user)
+            shared_download = self.client.get(
+                reverse("receipt_download", args=[receipt.pk])
+            )
+            self.assertEqual(shared_download.status_code, 200)
+            shared_download.close()
+
+            self.client.force_login(unshared_user)
+            self.assertEqual(
+                self.client.get(reverse("receipt_download", args=[receipt.pk])).status_code,
+                404,
+            )
+
+            self.client.force_login(admin_user)
+            admin_download = self.client.get(
+                reverse("receipt_download", args=[receipt.pk])
+            )
+            self.assertEqual(admin_download.status_code, 200)
+            admin_download.close()
+
+            platform_admin = User.objects.create_superuser(
+                "receipt-platform",
+                "receipt-platform@example.com",
+                "testpass123",
+            )
+            self.client.force_login(platform_admin)
+            platform_download = self.client.get(
+                reverse("receipt_download", args=[receipt.pk])
+            )
+            self.assertEqual(platform_download.status_code, 200)
+            platform_download.close()
+
+    def test_receipt_upload_rejects_non_pdf_files(self):
+        self.client.force_login(self.u1)
+        response = self.client.post(
+            reverse("receipt_create"),
+            {
+                "title": "Invalid receipt",
+                "payment_date": "2026-09-07",
+                "currency": "KES",
+                "file": SimpleUploadedFile(
+                    "receipt.txt",
+                    b"not a pdf",
+                    content_type="text/plain",
+                ),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Receipts must be uploaded as PDF files")
+        self.assertFalse(Receipt.objects.filter(title="Invalid receipt").exists())

@@ -814,6 +814,163 @@ def project_edit(request, pk):
     )
 
 
+def _visible_receipts(user):
+    queryset = Receipt.objects.select_related(
+        "organization",
+        "uploaded_by__user",
+        "project",
+        "task",
+    ).prefetch_related("shared_with__user")
+    if user.is_superuser:
+        return queryset
+    profile = getattr(user, "profile", None)
+    if not profile or not profile.organization_id:
+        return queryset.none()
+    queryset = queryset.filter(organization=profile.organization)
+    if profile.role == "admin":
+        return queryset
+    return queryset.filter(Q(uploaded_by=profile) | Q(shared_with=profile)).distinct()
+
+
+@login_required
+def receipts(request):
+    queryset = _visible_receipts(request.user)
+    project = request.GET.get("project", "")
+    if project:
+        queryset = queryset.filter(project_id=project)
+    profile = getattr(request.user, "profile", None)
+    projects_queryset = Project.objects.all()
+    if not request.user.is_superuser:
+        projects_queryset = projects_queryset.filter(organization=profile.organization)
+    return render(
+        request,
+        "erp/receipt_list.html",
+        {"receipts": queryset, "projects": projects_queryset},
+    )
+
+
+@login_required
+@transaction.atomic
+def receipt_create(request):
+    profile = _profile(request)
+    receipt = Receipt(
+        organization=profile.organization,
+        uploaded_by=profile,
+    )
+    form = ReceiptForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=receipt,
+        organization=profile.organization,
+        owner=profile,
+    )
+    if request.method == "POST" and form.is_valid():
+        receipt = form.save(False)
+        receipt.organization = profile.organization
+        receipt.uploaded_by = profile
+        receipt.full_clean()
+        receipt.save()
+        form.save_m2m()
+        admin_users = User.objects.filter(
+            profile__organization=profile.organization,
+            profile__role="admin",
+            is_active=True,
+        ).exclude(pk=request.user.pk)
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user=admin,
+                    title="Receipt submitted",
+                    message=f"{profile} submitted {receipt.title}.",
+                    url="/receipts/",
+                )
+                for admin in admin_users
+            ]
+        )
+        shared_users = receipt.shared_with.exclude(user=request.user).select_related(
+            "user"
+        )
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user=shared.user,
+                    title="Receipt shared with you",
+                    message=f"{profile} shared {receipt.title} with you.",
+                    url="/receipts/",
+                )
+                for shared in shared_users
+            ]
+        )
+        _audit(request, "receipt_submitted", receipt)
+        messages.success(request, "Receipt submitted successfully.")
+        return redirect(
+            "receipt_create" if request.POST.get("_add_another") else "receipts"
+        )
+    return render(
+        request,
+        "erp/form.html",
+        {"form": form, "title": "Add receipt", "submit": "Submit receipt"},
+    )
+
+
+@login_required
+@transaction.atomic
+def receipt_edit(request, pk):
+    profile = _profile(request)
+    receipt = get_object_or_404(
+        Receipt.objects.select_for_update(),
+        pk=pk,
+        organization=profile.organization,
+        uploaded_by=profile,
+    )
+    previous_shared_ids = set(receipt.shared_with.values_list("pk", flat=True))
+    form = ReceiptForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=receipt,
+        organization=profile.organization,
+        owner=profile,
+    )
+    if request.method == "POST" and form.is_valid():
+        receipt = form.save(False)
+        receipt.organization = profile.organization
+        receipt.uploaded_by = profile
+        receipt.full_clean()
+        receipt.save()
+        form.save_m2m()
+        newly_shared = receipt.shared_with.exclude(pk__in=previous_shared_ids)
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user=shared.user,
+                    title="Receipt shared with you",
+                    message=f"{profile} shared {receipt.title} with you.",
+                    url="/receipts/",
+                )
+                for shared in newly_shared.select_related("user")
+            ]
+        )
+        _audit(request, "receipt_updated", receipt)
+        messages.success(request, "Receipt and sharing visibility updated.")
+        return redirect("receipts")
+    return render(
+        request,
+        "erp/form.html",
+        {"form": form, "title": "Edit receipt", "submit": "Save changes"},
+    )
+
+
+@login_required
+def receipt_download(request, pk):
+    receipt = get_object_or_404(_visible_receipts(request.user), pk=pk)
+    return FileResponse(
+        receipt.file.open("rb"),
+        as_attachment=True,
+        filename=receipt.file.name.rsplit("/", 1)[-1],
+        content_type="application/pdf",
+    )
+
+
 @login_required
 def task_create(request):
     p = _profile(request)

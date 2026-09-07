@@ -27,6 +27,7 @@ from .models import (
     PaymentVoucherLine,
     Profile,
     Project,
+    Receipt,
     Task,
     Timesheet,
     TimesheetEntry,
@@ -361,6 +362,70 @@ class ProjectForm(StyledForm, forms.ModelForm):
                 "Project manager belongs to another organization.",
             )
         return cleaned_data
+
+
+class ReceiptForm(StyledForm, forms.ModelForm):
+    shared_with = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Share visibility with",
+        help_text="Selected employees can view and download this receipt.",
+    )
+
+    class Meta:
+        model = Receipt
+        fields = [
+            "title",
+            "payment_date",
+            "vendor",
+            "amount",
+            "currency",
+            "project",
+            "task",
+            "notes",
+            "file",
+            "shared_with",
+        ]
+        widgets = {
+            "payment_date": forms.DateInput(attrs={"type": "date"}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+            "file": forms.FileInput(attrs={"accept": "application/pdf,.pdf"}),
+        }
+
+    def __init__(self, *args, organization=None, owner=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.organization = organization
+        self.owner = owner
+        self.fields["project"].queryset = Project.objects.filter(
+            organization=organization
+        )
+        tasks = Task.objects.filter(organization=organization)
+        if owner and owner.role not in {"admin", "manager"}:
+            tasks = tasks.filter(Q(assigned_to=owner) | Q(created_by=owner.user))
+        self.fields["task"].queryset = tasks.distinct()
+        self.fields["project"].required = False
+        self.fields["task"].required = False
+        self.fields["project"].empty_label = "No project"
+        self.fields["task"].empty_label = "No task"
+        self.fields["shared_with"].queryset = Profile.objects.filter(
+            organization=organization,
+            user__is_active=True,
+        ).exclude(pk=getattr(owner, "pk", None)).select_related("user")
+        self.fields["file"].help_text = "PDF only, maximum 10 MB."
+
+    def clean_file(self):
+        upload = self.cleaned_data.get("file")
+        if not upload:
+            return upload
+        if Path(upload.name).suffix.lower() != ".pdf":
+            raise forms.ValidationError("Receipts must be uploaded as PDF files.")
+        if getattr(upload, "content_type", "") not in {
+            "application/pdf",
+            "application/x-pdf",
+        }:
+            raise forms.ValidationError("Receipts must use the PDF content type.")
+        return validate_business_upload(upload)
 
 
 class TaskStatusForm(StyledForm, forms.Form):

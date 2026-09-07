@@ -182,6 +182,56 @@ class Project(TenantModel):
         return f"{self.code} · {self.name}"
 
 
+class Receipt(TenantModel):
+    title = models.CharField(max_length=180)
+    payment_date = models.DateField(default=timezone.localdate)
+    vendor = models.CharField(max_length=180, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, default="KES")
+    notes = models.TextField(blank=True)
+    file = models.FileField(upload_to="receipts/%Y/%m/")
+    uploaded_by = models.ForeignKey(
+        Profile,
+        on_delete=models.PROTECT,
+        related_name="uploaded_receipts",
+    )
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="receipts",
+    )
+    task = models.ForeignKey(
+        "Task",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="receipts",
+    )
+    shared_with = models.ManyToManyField(
+        Profile,
+        blank=True,
+        related_name="shared_receipts",
+    )
+
+    class Meta:
+        ordering = ["-payment_date", "-created_at"]
+
+    def clean(self):
+        if self.uploaded_by_id and self.uploaded_by.organization_id != self.organization_id:
+            raise ValidationError("Receipt owner belongs to another organization.")
+        if self.project_id and self.project.organization_id != self.organization_id:
+            raise ValidationError("Project belongs to another organization.")
+        if self.task_id and self.task.organization_id != self.organization_id:
+            raise ValidationError("Task belongs to another organization.")
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError("Receipt amount must be greater than zero.")
+
+    def __str__(self):
+        return self.title
+
+
 class Task(TenantModel):
     STATUSES = [
         (x, x.replace("_", " ").title())
