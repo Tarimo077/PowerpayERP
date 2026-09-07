@@ -368,7 +368,7 @@ class ReceiptForm(StyledForm, forms.ModelForm):
     shared_with = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.none(),
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.SelectMultiple(attrs={"data-employee-picker": "true"}),
         label="Share visibility with",
         help_text="Selected employees can view and download this receipt.",
     )

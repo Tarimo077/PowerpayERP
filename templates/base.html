@@ -556,6 +556,111 @@
     const modalParser = new DOMParser()
 
     function initializePopupForm(root) {
+        function initializeEmployeePickers() {
+            root.querySelectorAll('select[data-employee-picker]').forEach(select => {
+                if (select.dataset.pickerReady) return;
+                select.dataset.pickerReady = 'true';
+                select.classList.add('hidden');
+
+                const picker = document.createElement('div'),
+                    control = document.createElement('button'),
+                    selectedHost = document.createElement('span'),
+                    placeholder = document.createElement('span'),
+                    dropdown = document.createElement('div'),
+                    search = document.createElement('input'),
+                    optionList = document.createElement('div');
+
+                picker.className = 'relative';
+                control.type = 'button';
+                control.className = 'w-full min-h-12 rounded-lg border border-base-300 bg-base-100 px-3 py-2 flex items-center gap-2 text-left focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100';
+                control.setAttribute('aria-haspopup', 'listbox');
+                control.setAttribute('aria-expanded', 'false');
+                selectedHost.className = 'flex flex-1 flex-wrap gap-2';
+                placeholder.className = 'text-base-content/45';
+                placeholder.textContent = 'Select employees…';
+                control.append(selectedHost, placeholder);
+                control.insertAdjacentHTML('beforeend', '<i class="fa-solid fa-chevron-down ml-auto text-xs opacity-45"></i>');
+
+                dropdown.className = 'hidden absolute z-50 mt-2 w-full rounded-xl border border-base-300 bg-base-100 p-3 shadow-xl';
+                search.type = 'search';
+                search.className = 'input input-bordered w-full mb-2';
+                search.placeholder = 'Search employees';
+                search.setAttribute('aria-label', 'Search employees');
+                optionList.className = 'max-h-56 overflow-y-auto space-y-1';
+                optionList.setAttribute('role', 'listbox');
+                optionList.setAttribute('aria-multiselectable', 'true');
+                dropdown.append(search, optionList);
+                picker.append(control, dropdown);
+                select.after(picker);
+
+                function render() {
+                    const selected = [...select.options].filter(option => option.selected);
+                    selectedHost.replaceChildren();
+                    placeholder.classList.toggle('hidden', selected.length > 0);
+                    selected.forEach(option => {
+                        const badge = document.createElement('span'),
+                            remove = document.createElement('span');
+                        badge.className = 'badge bg-emerald-600 border-emerald-600 text-white gap-1 py-3';
+                        badge.textContent = option.text;
+                        remove.className = 'ml-1 cursor-pointer font-bold';
+                        remove.textContent = '×';
+                        remove.setAttribute('aria-label', `Remove ${option.text}`);
+                        remove.addEventListener('click', event => {
+                            event.stopPropagation();
+                            option.selected = false;
+                            select.dispatchEvent(new Event('change', {bubbles: true}));
+                            render()
+                        });
+                        badge.append(remove);
+                        selectedHost.append(badge)
+                    });
+                    optionList.querySelectorAll('[data-employee-option]').forEach(button => {
+                        const option = [...select.options].find(item => item.value === button.dataset.employeeOption);
+                        button.classList.toggle('bg-emerald-50', Boolean(option?.selected));
+                        button.querySelector('i')?.classList.toggle('invisible', !option?.selected);
+                        button.setAttribute('aria-selected', String(Boolean(option?.selected)))
+                    })
+                }
+
+                [...select.options].forEach(option => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.dataset.employeeOption = option.value;
+                    button.dataset.searchText = option.text.toLowerCase();
+                    button.className = 'w-full rounded-lg px-3 py-2 flex items-center justify-between gap-3 hover:bg-orange-50 text-left';
+                    button.innerHTML = `<span></span><i class="fa-solid fa-check text-emerald-600"></i>`;
+                    button.querySelector('span').textContent = option.text;
+                    button.addEventListener('click', () => {
+                        option.selected = !option.selected;
+                        select.dispatchEvent(new Event('change', {bubbles: true}));
+                        render()
+                    });
+                    optionList.append(button)
+                });
+                search.addEventListener('input', () => {
+                    const query = search.value.trim().toLowerCase();
+                    optionList.querySelectorAll('[data-employee-option]').forEach(button => {
+                        button.classList.toggle('hidden', !button.dataset.searchText.includes(query))
+                    })
+                });
+                control.addEventListener('click', () => {
+                    const opening = dropdown.classList.contains('hidden');
+                    dropdown.classList.toggle('hidden', !opening);
+                    control.setAttribute('aria-expanded', String(opening));
+                    if (opening) search.focus()
+                });
+                document.addEventListener('click', event => {
+                    if (!picker.contains(event.target)) {
+                        dropdown.classList.add('hidden');
+                        control.setAttribute('aria-expanded', 'false')
+                    }
+                });
+                render()
+            })
+        }
+
+        initializeEmployeePickers();
+
         function initializeLines({
             hostSelector,
             templateSelector,
