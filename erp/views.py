@@ -66,7 +66,8 @@ def _audit(request, action, obj):
     if status_value is not None:
         details["status"] = status_value
     AuditLog.objects.create(
-        organization=getattr(p, "organization", None),
+        organization=getattr(p, "organization", None)
+        or getattr(obj, "organization", None),
         actor=request.user,
         action=action,
         entity_type=obj.__class__.__name__,
@@ -713,21 +714,103 @@ def tasks(request):
 
     q = request.GET.get("q", "")
     status = request.GET.get("status", "")
+    project = request.GET.get("project", "")
 
     if q:
         qs = qs.filter(
             Q(title__icontains=q)
             | Q(description__icontains=q)
             | Q(assigned_to__user__first_name__icontains=q)
+            | Q(project__name__icontains=q)
+            | Q(project__code__icontains=q)
         )
     if status:
         qs = qs.filter(status=status)
+    if project:
+        qs = qs.filter(project_id=project)
 
     task_rows = list(qs)
     for task in task_rows:
         task.can_change_status = bool(_task_status_choices(task, p))
     return render(
-        request, "erp/task_list.html", {"tasks": task_rows, "statuses": Task.STATUSES}
+        request,
+        "erp/task_list.html",
+        {
+            "tasks": task_rows,
+            "statuses": Task.STATUSES,
+            "projects": Project.objects.filter(organization=p.organization),
+        },
+    )
+
+
+@login_required
+def projects(request):
+    profile = getattr(request.user, "profile", None)
+    queryset = Project.objects.select_related(
+        "organization", "project_manager__user"
+    ).annotate(task_count=Count("tasks"))
+    if not request.user.is_superuser:
+        if not profile or not profile.organization_id:
+            return HttpResponse(status=403)
+        queryset = queryset.filter(organization=profile.organization)
+    return render(request, "erp/project_list.html", {"projects": queryset})
+
+
+@login_required
+@roles_allowed("admin")
+@transaction.atomic
+def project_create(request):
+    profile = getattr(request.user, "profile", None)
+    organization = None if request.user.is_superuser else profile.organization
+    form = ProjectForm(
+        request.POST or None,
+        organization=organization,
+        platform_admin=request.user.is_superuser,
+    )
+    if request.method == "POST" and form.is_valid():
+        project = form.save(False)
+        if organization:
+            project.organization = organization
+        project.full_clean()
+        project.save()
+        _audit(request, "project_created", project)
+        messages.success(request, f"Project {project.code} created.")
+        return redirect(
+            "project_create" if request.POST.get("_add_another") else "projects"
+        )
+    return render(
+        request,
+        "erp/form.html",
+        {"form": form, "title": "Add project", "submit": "Create project"},
+    )
+
+
+@login_required
+@roles_allowed("admin")
+@transaction.atomic
+def project_edit(request, pk):
+    profile = getattr(request.user, "profile", None)
+    queryset = Project.objects.select_for_update()
+    if not request.user.is_superuser:
+        queryset = queryset.filter(organization=profile.organization)
+    project = get_object_or_404(queryset, pk=pk)
+    form = ProjectForm(
+        request.POST or None,
+        instance=project,
+        organization=project.organization,
+        platform_admin=request.user.is_superuser,
+    )
+    if request.method == "POST" and form.is_valid():
+        project = form.save(False)
+        project.full_clean()
+        project.save()
+        _audit(request, "project_updated", project)
+        messages.success(request, f"Project {project.code} updated.")
+        return redirect("projects")
+    return render(
+        request,
+        "erp/form.html",
+        {"form": form, "title": "Edit project", "submit": "Save changes"},
     )
 
 
@@ -965,6 +1048,10 @@ def timesheet_create(request):
             Q(actual_completed_at__isnull=True)
             | Q(actual_completed_at__date__gte=obj.period_start)
         )
+        if form.cleaned_data.get("project_scope") == "selected":
+            assigned_tasks = assigned_tasks.filter(
+                project__in=form.cleaned_data["projects"]
+            )
         prefilled = _prefilled_timesheet_entries(obj, assigned_tasks)
         if prefilled:
             TimesheetEntry.objects.bulk_create(prefilled)
@@ -1570,6 +1657,10 @@ def timesheet_request(request):
                             Q(actual_completed_at__isnull=True)
                             | Q(actual_completed_at__date__gte=period_start)
                         )
+                        if form.cleaned_data.get("project_scope") == "selected":
+                            assigned = assigned.filter(
+                                project__in=form.cleaned_data["projects"]
+                            )
                         TimesheetEntry.objects.bulk_create(
                             _prefilled_timesheet_entries(sheet, assigned)
                         )

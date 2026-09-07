@@ -26,6 +26,7 @@ from .models import (
     PaymentVoucher,
     PaymentVoucherLine,
     Profile,
+    Project,
     Task,
     Timesheet,
     TimesheetEntry,
@@ -258,6 +259,7 @@ class TaskForm(StyledForm, forms.ModelForm):
             "description",
             "instructions",
             "assigned_to",
+            "project",
             "department",
             "priority",
             "start_date",
@@ -289,9 +291,76 @@ class TaskForm(StyledForm, forms.ModelForm):
         self.fields["department"].queryset = Department.objects.filter(
             organization=organization
         )
+        self.fields["project"].queryset = Project.objects.filter(
+            organization=organization
+        ).exclude(status="cancelled")
+        self.fields["project"].required = False
+        self.fields["project"].empty_label = "No project"
 
     def clean_attachment(self):
         return validate_business_upload(self.cleaned_data.get("attachment"))
+
+
+class ProjectForm(StyledForm, forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = [
+            "organization",
+            "name",
+            "code",
+            "description",
+            "status",
+            "start_date",
+            "end_date",
+            "project_manager",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, organization=None, platform_admin=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["organization"].queryset = Organization.objects.filter(
+            is_active=True
+        ).order_by("name")
+        if not platform_admin:
+            self.fields["organization"].queryset = Organization.objects.filter(
+                pk=getattr(organization, "pk", None)
+            )
+            self.fields["organization"].initial = organization
+            self.fields["organization"].widget = forms.HiddenInput()
+        elif self.instance.pk:
+            self.fields["organization"].disabled = True
+        selected_org = organization or getattr(self.instance, "organization", None)
+        selected_org_id = getattr(selected_org, "pk", None)
+        if self.is_bound:
+            selected_org_id = self.data.get("organization") or selected_org_id
+        managers = Profile.objects.filter(user__is_active=True)
+        if selected_org_id:
+            managers = managers.filter(organization_id=selected_org_id)
+        elif not platform_admin:
+            managers = managers.none()
+        self.fields["project_manager"].queryset = managers.select_related(
+            "user", "organization"
+        )
+        self.fields["project_manager"].required = False
+        self.fields["project_manager"].empty_label = "No project manager"
+
+    def clean_code(self):
+        return self.cleaned_data["code"].strip().upper()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        organization = cleaned_data.get("organization")
+        manager = cleaned_data.get("project_manager")
+        if manager and organization and manager.organization_id != organization.id:
+            self.add_error(
+                "project_manager",
+                "Project manager belongs to another organization.",
+            )
+        return cleaned_data
 
 
 class TaskStatusForm(StyledForm, forms.Form):
@@ -312,6 +381,21 @@ class TaskStatusForm(StyledForm, forms.Form):
 
 
 class TimesheetForm(StyledForm, forms.ModelForm):
+    project_scope = forms.ChoiceField(
+        choices=[
+            ("all", "All projects and tasks without a project"),
+            ("selected", "Only selected projects"),
+        ],
+        initial="all",
+        label="Tasks to prefill",
+        required=False,
+    )
+    projects = forms.ModelMultipleChoiceField(
+        queryset=Project.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Used only when ‘Only selected projects’ is chosen.",
+    )
     month = forms.ChoiceField(
         choices=[(number, calendar.month_name[number]) for number in range(1, 13)]
     )
@@ -357,7 +441,12 @@ class TimesheetForm(StyledForm, forms.ModelForm):
         self.fields["place_of_assignment"].help_text = (
             "Defaults to Kenya; change it when the assignment is elsewhere."
         )
+        self.fields["projects"].queryset = Project.objects.filter(
+            organization=organization
+        ).exclude(status="cancelled")
         if self.instance.pk:
+            self.fields.pop("project_scope")
+            self.fields.pop("projects")
             self.fields["month"].initial = self.instance.period_start.month
             self.fields["year"].initial = self.instance.period_start.year
             self.fields["month"].disabled = True
@@ -372,6 +461,8 @@ class TimesheetForm(StyledForm, forms.ModelForm):
             [
                 "month",
                 "year",
+                "project_scope",
+                "projects",
                 "service_contract",
                 "financing",
                 "contract_number",
@@ -404,6 +495,8 @@ class TimesheetForm(StyledForm, forms.ModelForm):
             raise forms.ValidationError(
                 f"A timesheet already exists for {calendar.month_name[int(month)]} {year}."
             )
+        if d.get("project_scope") == "selected" and not d.get("projects"):
+            self.add_error("projects", "Select at least one project to prefill.")
         return d
 
     def clean_expert_signature(self):
@@ -541,6 +634,21 @@ class TimesheetRequestForm(StyledForm, forms.Form):
             }
         ),
     )
+    project_scope = forms.ChoiceField(
+        choices=[
+            ("all", "All projects and tasks without a project"),
+            ("selected", "Only selected projects"),
+        ],
+        initial="all",
+        label="Tasks to prefill",
+        required=False,
+    )
+    projects = forms.ModelMultipleChoiceField(
+        queryset=Project.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Used only when ‘Only selected projects’ is chosen.",
+    )
 
     def __init__(
         self,
@@ -564,6 +672,18 @@ class TimesheetRequestForm(StyledForm, forms.Form):
             self.fields["employee"].initial = [selected_employee]
         self.fields["month"].initial = [str(timezone.localdate().month)]
         self.fields["due_date"].initial = timezone.localdate() + timedelta(days=3)
+        self.fields["projects"].queryset = Project.objects.filter(
+            organization=organization
+        ).exclude(status="cancelled")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("project_scope") == "selected"
+            and not cleaned_data.get("projects")
+        ):
+            self.add_error("projects", "Select at least one project to prefill.")
+        return cleaned_data
 
     def clean_due_date(self):
         due = self.cleaned_data["due_date"]

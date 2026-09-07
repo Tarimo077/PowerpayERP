@@ -6,6 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from .api import (
     DocumentViewSet,
     IsPlatformAdminOrOrganizationAdmin,
+    ProjectViewSet,
     TaskViewSet,
     TimesheetViewSet,
 )
@@ -16,6 +17,7 @@ from .api_auth import (
 )
 
 router = DefaultRouter()
+router.register("projects", ProjectViewSet, basename="api-project")
 router.register("tasks", TaskViewSet, basename="api-task")
 router.register("timesheets", TimesheetViewSet, basename="api-timesheet")
 router.register("documents", DocumentViewSet, basename="api-document")

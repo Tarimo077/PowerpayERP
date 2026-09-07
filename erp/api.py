@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .forms import validate_business_upload
-from .models import Document, Organization, Profile, Task, Timesheet
+from .models import Document, Organization, Profile, Project, Task, Timesheet
 
 
 class IsPlatformAdminOrOrganizationAdmin(BasePermission):
@@ -94,6 +94,69 @@ class TenantRelatedFieldsMixin:
             )
         return value
 
+    def validate_project(self, value):
+        organization = self.selected_organization()
+        if value and (not organization or value.organization_id != organization.id):
+            raise serializers.ValidationError(
+                "Project belongs to another organization."
+            )
+        return value
+
+
+class ProjectSerializer(TenantRelatedFieldsMixin, serializers.ModelSerializer):
+    organization_name = serializers.CharField(source="organization.name", read_only=True)
+    project_manager_name = serializers.CharField(
+        source="project_manager.user.get_full_name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "organization",
+            "organization_name",
+            "name",
+            "code",
+            "description",
+            "status",
+            "start_date",
+            "end_date",
+            "project_manager",
+            "project_manager_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+        extra_kwargs = {"organization": {"required": False}}
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        organization = attrs.get(
+            "organization", getattr(self.instance, "organization", None)
+        )
+        if not request.user.is_superuser:
+            organization = request.user.profile.organization
+        if not organization:
+            raise serializers.ValidationError(
+                {"organization": "This field is required."}
+            )
+        manager = attrs.get(
+            "project_manager", getattr(self.instance, "project_manager", None)
+        )
+        if manager and manager.organization_id != organization.id:
+            raise serializers.ValidationError(
+                {"project_manager": "Project manager belongs to another organization."}
+            )
+        start = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        if start and end and end < start:
+            raise serializers.ValidationError(
+                {"end_date": "Project end date cannot be before its start date."}
+            )
+        attrs["organization"] = organization
+        return attrs
+
 
 class TaskSerializer(TenantRelatedFieldsMixin, serializers.ModelSerializer):
     assignee_name = serializers.CharField(
@@ -113,6 +176,7 @@ class TaskSerializer(TenantRelatedFieldsMixin, serializers.ModelSerializer):
             "status",
             "assigned_to",
             "assignee_name",
+            "project",
             "department",
             "start_date",
             "due_date",
@@ -321,6 +385,71 @@ class TenantViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
+        tags=["Projects"],
+        summary="List projects",
+        description="Lists projects in the organization administrator's organization. Platform administrators can list and filter projects across all organizations.",
+    ),
+    retrieve=extend_schema(
+        tags=["Projects"],
+        summary="Get one project",
+        description="Returns a project inside the caller's permitted organization scope.",
+    ),
+    create=extend_schema(
+        tags=["Projects"],
+        summary="Create a project",
+        description="Creates an organization project. Organization administrators create only in their own organization; platform administrators select an organization.",
+    ),
+    update=extend_schema(tags=["Projects"], summary="Replace a project"),
+    partial_update=extend_schema(tags=["Projects"], summary="Update part of a project"),
+    destroy=extend_schema(
+        tags=["Projects"],
+        summary="Delete a project",
+        description="Deletes the project while retaining its tasks as unassigned to a project.",
+    ),
+)
+class ProjectViewSet(TenantViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    filterset_fields = {
+        "organization": ["exact"],
+        "status": ["exact", "in"],
+        "project_manager": ["exact", "isnull"],
+        "start_date": ["exact", "gte", "lte", "isnull"],
+        "end_date": ["exact", "gte", "lte", "isnull"],
+        "created_at": ["date", "date__gte", "date__lte"],
+    }
+    search_fields = ["name", "code", "description", "organization__name"]
+    ordering_fields = [
+        "name",
+        "code",
+        "status",
+        "start_date",
+        "end_date",
+        "created_at",
+        "updated_at",
+    ]
+    ordering = ["name"]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return self.queryset.none()
+        organization = self.organization()
+        queryset = Project.objects.select_related(
+            "organization", "project_manager__user"
+        )
+        return queryset if organization is None else queryset.filter(
+            organization=organization
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organization=serializer.validated_data.get("organization")
+            or self.organization()
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
         tags=["Tasks"],
         summary="List tasks",
         description="Returns a paginated, filterable list of tasks. Organization administrators see only their organization; platform administrators can see and filter all organizations.",
@@ -358,6 +487,7 @@ class TaskViewSet(TenantViewSet):
     filterset_fields = {
         "organization": ["exact"],
         "assigned_to": ["exact"],
+        "project": ["exact", "isnull"],
         "department": ["exact", "isnull"],
         "priority": ["exact", "in"],
         "status": ["exact", "in"],
@@ -365,7 +495,14 @@ class TaskViewSet(TenantViewSet):
         "due_date": ["exact", "gte", "lte"],
         "created_at": ["date", "date__gte", "date__lte"],
     }
-    search_fields = ["title", "description", "instructions", "assigned_to__user__email"]
+    search_fields = [
+        "title",
+        "description",
+        "instructions",
+        "assigned_to__user__email",
+        "project__name",
+        "project__code",
+    ]
     ordering_fields = [
         "created_at",
         "updated_at",

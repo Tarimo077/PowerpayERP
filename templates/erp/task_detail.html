@@ -51,6 +51,10 @@
             <p class="font-semibold">{{ task.actual_completed_at|date:'d M Y, H:i'|default:'Not completed' }}</p>
           </div>
           <div>
+            <small class="opacity-60">Project</small>
+            <p>{{ task.project|default:'No project' }}</p>
+          </div>
+          <div>
             <small class="opacity-60">Department</small>
             <p>{{ task.department|default:'General' }}</p>
           </div>

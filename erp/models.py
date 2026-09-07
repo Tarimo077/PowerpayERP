@@ -134,6 +134,54 @@ class TenantModel(TimeStamped):
         abstract = True
 
 
+class Project(TenantModel):
+    STATUSES = [
+        ("planned", "Planned"),
+        ("active", "Active"),
+        ("on_hold", "On hold"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+    ]
+    name = models.CharField(max_length=180)
+    code = models.CharField(max_length=50)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUSES, default="planned")
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    project_manager = models.ForeignKey(
+        Profile,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="managed_projects",
+    )
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "code"],
+                name="unique_project_code_per_org",
+            )
+        ]
+
+    def clean(self):
+        if (
+            self.project_manager_id
+            and self.project_manager.organization_id != self.organization_id
+        ):
+            raise ValidationError("Project manager belongs to another organization.")
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError("Project end date cannot be before its start date.")
+
+    def save(self, *args, **kwargs):
+        self.code = self.code.strip().upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.code} · {self.name}"
+
+
 class Task(TenantModel):
     STATUSES = [
         (x, x.replace("_", " ").title())
@@ -161,6 +209,13 @@ class Task(TenantModel):
         on_delete=models.SET_NULL,
         related_name="tasks",
     )
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tasks",
+    )
     created_by = models.ForeignKey(
         User, on_delete=models.PROTECT, related_name="created_tasks"
     )
@@ -178,6 +233,8 @@ class Task(TenantModel):
             and self.assigned_to.organization_id != self.organization_id
         ):
             raise ValidationError("Assignee belongs to another organization.")
+        if self.project_id and self.project.organization_id != self.organization_id:
+            raise ValidationError("Project belongs to another organization.")
 
     @property
     def is_overdue(self):

@@ -14,6 +14,12 @@
         {% for v, l in statuses %}
           <option value="{{ v }}">{{ l }}</option>
         {% endfor %}
+      </select>
+      <select name="project" class="select select-bordered">
+        <option value="">All projects</option>
+        {% for project in projects %}
+          <option value="{{ project.pk }}" {% if request.GET.project == project.pk|stringformat:'s' %}selected{% endif %}>{{ project }}</option>
+        {% endfor %}
       </select><button class="btn">Filter</button>
     </form>
     <a href="{% url 'task_create' %}"
@@ -38,7 +44,7 @@
           {% for task in tasks %}
             <tr class="hover">
               <td>
-                <a href="{% url 'task_detail' task.pk %}" class="font-semibold link">{{ task.title }}</a><div class="text-xs opacity-50">{{ task.department|default:'General' }}</div>
+                <a href="{% url 'task_detail' task.pk %}" class="font-semibold link">{{ task.title }}</a><div class="text-xs opacity-50">{{ task.project|default:'No project' }} · {{ task.department|default:'General' }}</div>
               </td>
               <td>{{ task.assigned_to }}</td>
               <td>

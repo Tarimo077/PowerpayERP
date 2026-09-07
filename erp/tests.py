@@ -32,6 +32,7 @@ from .models import (
     EmailOTP,
     PaymentVoucher,
     PaymentVoucherReceipt,
+    Project,
     UserInvite,
 )
 
@@ -1194,6 +1195,7 @@ class TenantIsolationTests(TestCase):
         self.assertRedirects(blocked, reverse("timesheet_detail", args=[sheet.pk]))
         sheet.refresh_from_db()
         self.assertEqual(sheet.status, "draft")
+
         response = self.client.post(
             reverse("timesheet_entry_edit", args=[sheet.pk, entry.pk]),
             {
@@ -1320,6 +1322,89 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(workbook.sheetnames, ["TS - March 26", "TS - June 26"])
         self.assertIn(
             "Unplanned stakeholder workshop", workbook["TS - March 26"]["H25"].value
+        )
+
+    def test_timesheet_prefill_can_be_limited_to_selected_projects(self):
+        selected_project = Project.objects.create(
+            organization=self.o1,
+            name="Selected project",
+            code="SELECTED",
+            status="active",
+        )
+        excluded_project = Project.objects.create(
+            organization=self.o1,
+            name="Excluded project",
+            code="EXCLUDED",
+            status="active",
+        )
+        worked_at = timezone.make_aware(datetime(2026, 7, 6, 9, 0))
+        included_task = Task.objects.create(
+            organization=self.o1,
+            project=selected_project,
+            title="Included work",
+            assigned_to=self.p1,
+            created_by=self.u1,
+            status="completed",
+            due_date=date(2026, 7, 6),
+            actual_started_at=worked_at,
+            actual_completed_at=worked_at,
+        )
+        Task.objects.create(
+            organization=self.o1,
+            project=excluded_project,
+            title="Excluded work",
+            assigned_to=self.p1,
+            created_by=self.u1,
+            status="completed",
+            due_date=date(2026, 7, 6),
+            actual_started_at=worked_at,
+            actual_completed_at=worked_at,
+        )
+        self.client.force_login(self.u1)
+        response = self.client.post(
+            reverse("timesheet_create"),
+            {
+                "month": "7",
+                "year": "2026",
+                "place_of_assignment": "Kenya",
+                "project_scope": "selected",
+                "projects": [selected_project.pk],
+            },
+        )
+        sheet = Timesheet.objects.get(employee=self.p1, period_start=date(2026, 7, 1))
+        self.assertRedirects(response, reverse("timesheet_detail", args=[sheet.pk]))
+        self.assertEqual(
+            list(sheet.entries.values_list("task_id", flat=True)),
+            [included_task.pk],
+        )
+
+    def test_only_admins_create_projects_and_projects_are_tenant_scoped(self):
+        self.client.force_login(self.u1)
+        denied = self.client.post(
+            reverse("project_create"),
+            {"organization": self.o1.pk, "name": "Denied", "code": "DENIED"},
+        )
+        self.assertRedirects(denied, reverse("dashboard"))
+        self.assertFalse(Project.objects.filter(code="DENIED").exists())
+
+        admin_user = User.objects.create_user("project-admin", password="testpass123")
+        Profile.objects.create(user=admin_user, organization=self.o1, role="admin")
+        self.client.force_login(admin_user)
+        created = self.client.post(
+            reverse("project_create"),
+            {
+                "organization": self.o1.pk,
+                "name": "ERP rollout",
+                "code": "erp-01",
+                "status": "active",
+            },
+        )
+        self.assertRedirects(created, reverse("projects"))
+        self.assertTrue(
+            Project.objects.filter(
+                organization=self.o1,
+                code="ERP-01",
+            ).exists()
         )
 
     def test_timesheet_prefill_uses_actual_task_work_dates(self):

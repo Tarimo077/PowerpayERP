@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block page_title %}Projects{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-2xl font-bold">Projects</h2>
+      <p class="opacity-60 mt-1">Track organizational projects and group related tasks.</p>
+    </div>
+    {% if user.is_superuser or current_profile.role == 'admin' %}
+      <a href="{% url 'project_create' %}"
+         class="btn btn-primary text-white"
+         data-modal
+         data-modal-title="Add project"><i class="fa-solid fa-plus"></i> Add project</a>
+    {% endif %}
+  </div>
+  <section class="overflow-x-auto bg-base-100 shadow-sm rounded-xl border border-base-300">
+    <table class="table">
+      <thead>
+        <tr>
+          {% if user.is_superuser %}<th>Organization</th>{% endif %}
+          <th>Project</th>
+          <th>Manager</th>
+          <th>Timeline</th>
+          <th>Tasks</th>
+          <th>Status</th>
+          {% if user.is_superuser or current_profile.role == 'admin' %}<th class="text-right">Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+          <tr class="hover">
+            {% if user.is_superuser %}<td>{{ project.organization }}</td>{% endif %}
+            <td><div class="font-semibold">{{ project.name }}</div><div class="text-xs font-mono opacity-60">{{ project.code }}</div></td>
+            <td>{{ project.project_manager|default:'—' }}</td>
+            <td>{{ project.start_date|default:'—' }} — {{ project.end_date|default:'—' }}</td>
+            <td><span class="badge badge-ghost">{{ project.task_count }}</span></td>
+            <td><span class="badge {% if project.status == 'active' or project.status == 'completed' %}badge-success{% elif project.status == 'on_hold' %}badge-warning{% elif project.status == 'cancelled' %}badge-error{% else %}badge-ghost{% endif %} {% if project.status != 'planned' %}text-white{% endif %}">{{ project.get_status_display }}</span></td>
+            {% if user.is_superuser or current_profile.role == 'admin' %}<td class="text-right"><a href="{% url 'project_edit' project.pk %}" class="btn btn-sm btn-primary text-white" data-modal data-modal-title="Edit project">Edit</a></td>{% endif %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center py-14 opacity-50">No projects have been logged.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}
