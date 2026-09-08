@@ -1,9 +1,10 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="powerpay">
+<html lang="en" data-theme="light" style="color-scheme: light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light" />
     <title>
       {% block title %}
         PowerpayERP
@@ -40,10 +41,24 @@
         }
     </script>
     <style>
-        :root {
+        :root,
+        html[data-theme="light"] {
             --green: #059669;
             --orange: #f97316;
             --side: 272px;
+            --p: 160 84% 39%;
+            --pc: 0 0% 100%;
+            --s: 25 95% 53%;
+            --sc: 0 0% 100%;
+            --a: 27 96% 61%;
+            --ac: 0 0% 100%;
+            --n: 215 28% 17%;
+            --nc: 0 0% 100%;
+            --b1: 0 0% 100%;
+            --b2: 220 14% 97%;
+            --b3: 220 13% 91%;
+            --bc: 150 17% 11%;
+            color-scheme: light !important;
         }
 
         body {
