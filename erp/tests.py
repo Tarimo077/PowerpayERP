@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 import base64
+import re
 import tempfile
 import jwt
 from django.contrib.auth.models import User
@@ -365,6 +366,28 @@ class TenantIsolationTests(TestCase):
                 recipient="one@example.com", status="sent"
             ).exists()
         )
+
+    def test_successful_otp_login_restores_normal_session_lifetime(self):
+        self.u1.email = "session@example.com"
+        self.u1.save(update_fields=["email"])
+        with self.settings(
+            EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+            SESSION_COOKIE_AGE=43200,
+        ):
+            response = self.client.post(
+                reverse("login"),
+                {"email": "session@example.com", "password": "testpass123"},
+            )
+            self.assertRedirects(response, reverse("verify_otp"))
+            self.assertLessEqual(self.client.session.get_expiry_age(), 600)
+            code = re.search(r"\d{6}", mail.outbox[-1].body).group()
+
+            verified = self.client.post(reverse("verify_otp"), {"otp": code})
+            self.assertRedirects(verified, reverse("dashboard"))
+            session = self.client.session
+            self.assertEqual(int(session["_session_expiry"]), 43200)
+            self.assertGreater(session.get_expiry_age(), 43190)
+            self.assertIn("_auth_user_id", session)
 
     def test_login_rate_limit_blocks_repeated_password_attempts(self):
         cache.clear()

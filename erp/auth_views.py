@@ -1,4 +1,5 @@
 import secrets
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
@@ -90,6 +91,9 @@ def verify_otp(request):
         elif otp.matches(form.cleaned_data["otp"]):
             user = otp.user
             login(request, user, backend="erp.auth_backends.EmailBackend")
+            # The pre-authentication session expires with the OTP after ten minutes.
+            # Restore the normal authenticated lifetime once verification succeeds.
+            request.session.set_expiry(settings.SESSION_COOKIE_AGE)
             request.session.pop("otp_user_id", None)
             request.session["otp_verified"] = True
             otp.delete()
