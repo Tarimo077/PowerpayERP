@@ -39,6 +39,13 @@ from .models import (
 )
 
 
+def close_file_response_resources(response):
+    """Close response files without emitting Django's request-finished signal."""
+    for closer in response._resource_closers:
+        closer()
+    response._resource_closers.clear()
+
+
 class TenantIsolationTests(TestCase):
     def setUp(self):
         self.o1 = Organization.objects.create(
@@ -205,7 +212,7 @@ class TenantIsolationTests(TestCase):
             self.client.force_login(other_user)
             response = self.client.get(reverse("document_download", args=[document.pk]))
             self.assertEqual(response.status_code, 200)
-            response.close()
+            close_file_response_resources(response)
 
     def test_api_requires_highest_organization_role_and_is_tenant_scoped(self):
         self.client.force_login(self.u1)
@@ -665,7 +672,7 @@ class TenantIsolationTests(TestCase):
             )
             self.assertEqual(opened.status_code, 200)
             self.assertEqual(opened["Content-Type"], "application/pdf")
-            opened.close()
+            close_file_response_resources(opened)
             self.client.force_login(self.u2)
             self.assertEqual(
                 self.client.get(
@@ -2301,14 +2308,14 @@ class TenantIsolationTests(TestCase):
                 reverse("receipt_download", args=[receipt.pk])
             )
             self.assertEqual(owner_download.status_code, 200)
-            owner_download.close()
+            close_file_response_resources(owner_download)
 
             self.client.force_login(colleague_user)
             shared_download = self.client.get(
                 reverse("receipt_download", args=[receipt.pk])
             )
             self.assertEqual(shared_download.status_code, 200)
-            shared_download.close()
+            close_file_response_resources(shared_download)
 
             self.client.force_login(unshared_user)
             self.assertEqual(
@@ -2321,7 +2328,7 @@ class TenantIsolationTests(TestCase):
                 reverse("receipt_download", args=[receipt.pk])
             )
             self.assertEqual(admin_download.status_code, 200)
-            admin_download.close()
+            close_file_response_resources(admin_download)
 
             platform_admin = User.objects.create_superuser(
                 "receipt-platform",
@@ -2333,7 +2340,7 @@ class TenantIsolationTests(TestCase):
                 reverse("receipt_download", args=[receipt.pk])
             )
             self.assertEqual(platform_download.status_code, 200)
-            platform_download.close()
+            close_file_response_resources(platform_download)
 
     def test_receipt_upload_rejects_non_pdf_files(self):
         self.client.force_login(self.u1)
