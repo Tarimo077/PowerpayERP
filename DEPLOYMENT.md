@@ -304,6 +304,38 @@ Copy backups to encrypted off-server storage. Test restoring both PostgreSQL and
 
 ## Updating the application
 
+### Automated GitHub deployment
+
+The `.github/workflows/test-and-deploy.yml` workflow tests every pull request and
+push targeting `master`. A successful push to `master` deploys through SSH; pull
+requests never deploy.
+
+Create a GitHub environment named `production` and add these environment secrets:
+
+- `DEPLOY_HOST`: production server hostname or IP address.
+- `DEPLOY_PORT`: SSH port, normally `22`.
+- `DEPLOY_USER`: SSH user with access to `/erp/PowerpayERP` and Docker.
+- `DEPLOY_SSH_KEY`: the complete private SSH key, including its header and footer.
+- `DEPLOY_SSH_PASSPHRASE`: private-key passphrase, or leave unset for an
+  unencrypted deployment key.
+- `DEPLOY_HOST_FINGERPRINT`: SHA256 fingerprint of the server's SSH host key.
+
+Obtain the Ed25519 host fingerprint on the production server with:
+
+```bash
+ssh-keygen -l -E sha256 -f /etc/ssh/ssh_host_ed25519_key.pub | awk '{print $2}'
+```
+
+Add the public half of `DEPLOY_SSH_KEY` to the deployment user's
+`~/.ssh/authorized_keys`. The checkout on the server must already be able to pull
+the repository non-interactively. Production `.env.production` and `secrets/`
+files stay on the server and must not be committed.
+
+The deployment uses `compose.host-nginx.yaml`, so it preserves the existing host
+Nginx sites and does not start the Compose `nginx` service.
+
+### Manual update
+
 Back up first, then:
 
 ```bash

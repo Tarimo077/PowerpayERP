@@ -1733,7 +1733,7 @@ class TenantIsolationTests(TestCase):
         self.client.force_login(self.u1)
         data = {
             "purpose": "Office kitchen and cleaning supplies",
-            "needed_by": "2026-09-10",
+            "needed_by": (timezone.localdate() + timedelta(days=7)).isoformat(),
             "delivery_location": "Nairobi office",
             "department": "",
             "lines-TOTAL_FORMS": "2",

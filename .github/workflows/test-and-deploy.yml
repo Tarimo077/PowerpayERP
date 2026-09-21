@@ -1,0 +1,128 @@
+name: Test and deploy
+
+"on":
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powerpayerp-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Django tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: powerpayerp_test
+          POSTGRES_USER: powerpayerp
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U powerpayerp -d powerpayerp_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEBUG: "True"
+      SECRET_KEY: ci-only-secret-key
+      ALLOWED_HOSTS: testserver,localhost,127.0.0.1
+      DATABASE_ENGINE: postgresql
+      POSTGRES_DB: powerpayerp_test
+      POSTGRES_USER: powerpayerp
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_SSLMODE: disable
+      REDIS_URL: redis://127.0.0.1:6379/1
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+
+      - name: Run Django system checks
+        run: python manage.py check
+
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run test suite
+        run: python manage.py test
+
+  deploy:
+    name: Deploy production
+    needs: test
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+
+    steps:
+      - name: Deploy through SSH
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          envs: DEPLOY_SHA
+          timeout: 30s
+          command_timeout: 30m
+          script: |
+            set -eu
+            cd /erp/PowerpayERP
+
+            git fetch origin master
+            git checkout master
+            git merge --ff-only "$DEPLOY_SHA"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+
+            COMPOSE="docker compose --env-file .env.production -f compose.prod.yaml -f compose.host-nginx.yaml"
+
+            $COMPOSE build web email-retry
+            $COMPOSE run --rm web python manage.py migrate --noinput
+            $COMPOSE run --rm web python manage.py collectstatic --noinput
+            $COMPOSE up -d --force-recreate --wait --wait-timeout 180 db redis web email-retry
+            $COMPOSE exec -T web python manage.py check --deploy
+            $COMPOSE ps
+
+            curl --fail --silent --show-error \
+              --header "Host: erp.powerpayafrica.com" \
+              --header "X-Forwarded-Proto: https" \
+              http://127.0.0.1:8000/healthz/
