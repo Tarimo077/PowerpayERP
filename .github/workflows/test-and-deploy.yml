@@ -46,7 +46,7 @@ jobs:
 
     env:
       DEBUG: "True"
-      SECRET_KEY: ci-only-secret-key
+      SECRET_KEY: ci-only-secret-key-that-is-longer-than-32-bytes
       ALLOWED_HOSTS: testserver,localhost,127.0.0.1
       DATABASE_ENGINE: postgresql
       POSTGRES_DB: powerpayerp_test
@@ -72,7 +72,9 @@ jobs:
         run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
 
       - name: Run Django system checks
-        run: python manage.py check
+        run: |
+          mkdir -p staticfiles
+          python manage.py check
 
       - name: Check for missing migrations
         run: python manage.py makemigrations --check --dry-run

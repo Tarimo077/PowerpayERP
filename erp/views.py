@@ -1653,7 +1653,7 @@ def timesheet_signature_upload(request, pk):
 def timesheet_review(request, pk):
     p = _profile(request)
     obj = get_object_or_404(
-        Timesheet.objects.select_for_update().select_related(
+        Timesheet.objects.select_for_update(of=("self",)).select_related(
             "employee__user", "employee__manager"
         ),
         pk=pk,
@@ -2359,7 +2359,7 @@ def leave_request_create(request):
 def leave_request_review(request, pk):
     p = _profile(request)
     requests = (
-        LeaveRequest.objects.select_for_update()
+        LeaveRequest.objects.select_for_update(of=("self",))
         .filter(organization=p.organization)
         .select_related("employee__user", "requested_approver__user")
     )
@@ -2504,7 +2504,7 @@ def _visible_vouchers(profile):
     if profile.role == "manager":
         return qs.filter(
             Q(prepared_by=profile.user) | Q(requested_approver=profile)
-        ).distinct()
+        )
     return qs
 
 
@@ -2690,7 +2690,9 @@ def payment_voucher_receipt(request, pk, receipt_pk):
 @transaction.atomic
 def payment_voucher_action(request, pk, action):
     p = _profile(request)
-    voucher = get_object_or_404(_visible_vouchers(p).select_for_update(), pk=pk)
+    voucher = get_object_or_404(
+        _visible_vouchers(p).select_for_update(of=("self",)), pk=pk
+    )
     allowed = {
         "submit": (["draft", "rejected"], "submitted"),
         "approve": (["submitted"], "approved"),
@@ -2974,7 +2976,7 @@ def _visible_item_requests(profile):
     if profile.role == "manager":
         return qs.filter(
             Q(requested_by=profile.user) | Q(requested_approver=profile)
-        ).distinct()
+        )
     return qs
 
 
@@ -3092,7 +3094,9 @@ def item_request_detail(request, pk):
 @transaction.atomic
 def item_request_action(request, pk, action):
     p = _profile(request)
-    obj = get_object_or_404(_visible_item_requests(p).select_for_update(), pk=pk)
+    obj = get_object_or_404(
+        _visible_item_requests(p).select_for_update(of=("self",)), pk=pk
+    )
     if (
         action not in ["approve", "reject", "escalate"]
         or obj.status != "submitted"
@@ -3561,7 +3565,9 @@ def employee_access_action(request, pk, action):
         return HttpResponse(status=404)
 
     employee = get_object_or_404(
-        Profile.objects.select_for_update().select_related("user", "organization"),
+        Profile.objects.select_for_update(of=("self",)).select_related(
+            "user", "organization"
+        ),
         pk=pk,
     )
     actor_profile = getattr(request.user, "profile", None)
